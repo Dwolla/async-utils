@@ -92,6 +92,16 @@ lazy val `async-utils-ce3-twitter-19-4` = (project in file("twitter-ce3-19.4"))
     },
   )
 
+lazy val examples = (project in file("examples"))
+  .settings(
+    libraryDependencies ++= {
+      Seq(
+        "org.typelevel" %% "cats-tagless-macros" % "0.14.0",
+      ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+    }
+  )
+  .dependsOn(`async-utils-ce3`)
+
 lazy val `async-utils-root` = (project in file("."))
   .aggregate(
     `async-utils-ce2`,
