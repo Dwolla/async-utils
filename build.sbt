@@ -35,8 +35,8 @@ lazy val CatsEffect3V = "3.1.1"
 lazy val TwitterUtilsLatestV = "21.5.0"
 lazy val TwitterUtils19_4V = "19.4.0"
 
-lazy val TwitterUtilsLatest = ConfigAxis("_latest", "")
-lazy val TwitterUtils19_4 = ConfigAxis("_19_4", "")
+lazy val TwitterUtilsLatest = ConfigAxis("_latest", "latest")
+lazy val TwitterUtils19_4 = ConfigAxis("_19_4", "19.4")
 
 lazy val CatsEffect2 = ConfigAxis("_ce2", "-ce2")
 lazy val CatsEffect3 = ConfigAxis("_ce3", "-ce3")
@@ -85,6 +85,34 @@ lazy val `async-utils` = (projectMatrix in file("scala-futures"))
       },
     )
   )
+  .customRow(
+    scalaVersions = Scala2Versions,
+    axisValues = Seq(CatsEffect2, VirtualAxis.js),
+    _.settings(
+      moduleName := name.value + "-ce2",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
+      libraryDependencies ++= {
+        Seq(
+          "org.typelevel" %%% "cats-effect" % CatsEffect2V,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      },
+    )
+      .enablePlugins(ScalaJSPlugin)
+  )
+  .customRow(
+    scalaVersions = Scala2Versions,
+    axisValues = Seq(CatsEffect3, VirtualAxis.js),
+    _.settings(
+      moduleName := name.value + "-ce3",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
+      libraryDependencies ++= {
+        Seq(
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      },
+    )
+      .enablePlugins(ScalaJSPlugin)
+  )
 
 lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
   .customRow(
@@ -117,7 +145,7 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
   )
   .customRow(
     scalaVersions = Seq(SCALA_2_12),
-    axisValues = Seq(TwitterUtils19_4, CatsEffect2, VirtualAxis.jvm),
+    axisValues = Seq(CatsEffect2, TwitterUtils19_4, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-19-4-ce2",
       libraryDependencies ++= {
@@ -130,7 +158,7 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
   )
   .customRow(
     scalaVersions = Seq(SCALA_2_12),
-    axisValues = Seq(TwitterUtils19_4, CatsEffect3, VirtualAxis.jvm),
+    axisValues = Seq(CatsEffect3, TwitterUtils19_4, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-19-4-ce3",
       libraryDependencies ++= {
@@ -154,11 +182,13 @@ lazy val examples = (projectMatrix in file("examples"))
   .jvmPlatform(scalaVersions = Scala2Versions)
   .dependsOn(`async-utils`)
 
-lazy val `async-utils-root` = (projectMatrix in file("."))
+lazy val `async-utils-root` = (project in file("."))
   .aggregate(
-    `async-utils`,
-    `async-utils-twitter`,
-    examples,
+    Seq(
+      `async-utils`,
+      `async-utils-twitter`,
+      examples,
+    ).flatMap(_.projectRefs): _*
   )
   .settings(
     publish / skip := true,
