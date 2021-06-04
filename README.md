@@ -1,5 +1,8 @@
 # Async Utilities
 
+![Dwolla/async-utils CI](https://github.com/Dwolla/async-utils/actions/workflows/ci.yml/badge.svg)
+[![license](https://img.shields.io/github/license/Dwolla/async-utils.svg?style=flat-square)]()
+
 ## Use `ReaderT` for safely converting `Future`-based traits to cats-effect
 
 You have a higher-kinded trait like this:
@@ -42,3 +45,7 @@ val futureFoo: FooService[Future] = new FutureFoo
 
 val fooService: FooService[IO] = FooService.FooServiceReaderT[Future].mapK(ScalaFutureService.provide[IO](futureFoo))
 ```
+
+## Twitter Futures
+
+The same structure works for Twitter Futures. Just replace `ScalaFutureService` with `TwitterFutureService` in the example above.
