@@ -20,6 +20,7 @@ inThisBuild(List(
     WorkflowStep.Sbt(
       List("ci-release"),
       env = Map(
+        "CI_RELEASE" -> "publishSigned",
         "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
         "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
         "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
@@ -54,12 +55,16 @@ lazy val scala2CompilerPlugins: Seq[ModuleID] = Seq(
 def dedupKindProjectorOptions(opts: Seq[String]): Seq[String] =
   if (opts.count(_.contains("-Ykind-projector")) > 1) opts.filterNot(_ == "-Ykind-projector") else opts
 
+lazy val moduleBase =
+  Def.setting((Compile / scalaSource).value.getParentFile)
+
 lazy val `async-utils` = (projectMatrix in file("scala-futures"))
   .customRow(
     scalaVersions = Scala2Versions,
     axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce2",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
       libraryDependencies ++= {
         Seq(
           "org.typelevel" %% "cats-effect" % CatsEffect2V,
@@ -72,6 +77,7 @@ lazy val `async-utils` = (projectMatrix in file("scala-futures"))
     axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce3",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
       libraryDependencies ++= {
         Seq(
           "org.typelevel" %% "cats-effect" % CatsEffect3V,
@@ -86,6 +92,7 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
     axisValues = Seq(CatsEffect2, TwitterUtilsLatest, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce2",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
       libraryDependencies ++= {
         Seq(
           "org.typelevel" %% "cats-effect" % CatsEffect2V,
@@ -99,6 +106,7 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
     axisValues = Seq(CatsEffect3, TwitterUtilsLatest, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce3",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
       libraryDependencies ++= {
         Seq(
           "org.typelevel" %% "cats-effect" % CatsEffect3V,
@@ -147,11 +155,11 @@ lazy val examples = (projectMatrix in file("examples"))
   .dependsOn(`async-utils`)
 
 lazy val `async-utils-root` = (projectMatrix in file("."))
-  .settings(
-    publish / skip := true,
-  )
   .aggregate(
     `async-utils`,
     `async-utils-twitter`,
     examples,
+  )
+  .settings(
+    publish / skip := true,
   )
