@@ -12,22 +12,6 @@ inThisBuild(List(
     ),
   ),
   startYear := Option(2021),
-
-  githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
-  githubWorkflowTargetTags ++= Seq("v*"),
-  githubWorkflowPublishTargetBranches := Seq.empty,
-  githubWorkflowPublish := Seq(
-    WorkflowStep.Sbt(
-      List("ci-release"),
-      env = Map(
-        "CI_RELEASE" -> "publishSigned",
-        "PGP_PASSPHRASE" -> "${{ secrets.PGP_PASSPHRASE }}",
-        "PGP_SECRET" -> "${{ secrets.PGP_SECRET }}",
-        "SONATYPE_PASSWORD" -> "${{ secrets.SONATYPE_PASSWORD }}",
-        "SONATYPE_USERNAME" -> "${{ secrets.SONATYPE_USERNAME }}",
-      )
-    )
-  ),
 ))
 
 lazy val CatsEffect2V = "2.5.1"
