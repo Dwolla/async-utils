@@ -29,7 +29,7 @@ With cats-tagless, you can auto-derive a `FunctorK[FooService]` instance and an 
 object FooService {
   import cats.tagless._
 
-  def FooServiceReaderT[F[_]]: FooService[ReaderT[F, FooService[F], *]] = 
+  implicit def FooServiceReaderT[F[_]]: FooService[ReaderT[F, FooService[F], *]] = 
     Derive.readerT[FooService, F]
   implicit val FooServiceFunctorK: FunctorK[FooService] = Derive.functorK
 }
@@ -39,13 +39,13 @@ Now you can safely convert your `Future`-based implementation into one in `F[_] 
 
 ```scala
 import cats.tagless.syntax.all._
-import com.dwolla.util.async._
+import com.dwolla.util.async.stdlib._
 
 val futureFoo: FooService[Future] = new FutureFoo
 
-val fooService: FooService[IO] = FooService.FooServiceReaderT[Future].mapK(ScalaFutureService.provide[IO](futureFoo))
+val fooService: FooService[IO] = futureFoo.asyncMapK[IO]
 ```
 
 ## Twitter Futures
 
-The same structure works for Twitter Futures. Just replace `ScalaFutureService` with `TwitterFutureService` in the example above.
+The same structure works for Twitter Futures. Just replace `import com.dwolla.util.async.stdlib._` with `com.dwolla.util.async.twitter._` in the example above.
