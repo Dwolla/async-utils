@@ -1,8 +1,7 @@
 import cats.data._
 import cats.effect._
 import cats.tagless._
-import cats.tagless.syntax.all._
-import com.dwolla.util.async.ScalaFutureService
+import com.dwolla.util.async.stdlib._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -24,8 +23,7 @@ object Demo extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val fooService: FooService[IO] =
-      FooService.FooServiceReaderT[Future]
-        .mapK(ScalaFutureService.provide[IO](new FutureFoo()))
+      new FutureFoo().asyncMapK[IO]
 
     fooService.foo(-1) // doesn't do anything because the `IO[Unit]` is discarded
 
