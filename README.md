@@ -1,7 +1,8 @@
 # Async Utilities
 
-![Dwolla/async-utils CI](https://github.com/Dwolla/async-utils/actions/workflows/ci.yml/badge.svg)
-[![license](https://img.shields.io/github/license/Dwolla/async-utils.svg?style=flat-square)]()
+[![Dwolla/async-utils CI](https://github.com/Dwolla/async-utils/actions/workflows/ci.yml/badge.svg)](https://github.com/Dwolla/async-utils/actions)
+[![license](https://img.shields.io/github/license/Dwolla/async-utils.svg)](https://github.com/Dwolla/async-utils/blob/main/LICENSE.txt)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/dwolla/async-utils)](https://github.com/Dwolla/async-utils/releases)
 
 ## Use `ReaderT` for safely converting `Future`-based traits to cats-effect
 
@@ -49,3 +50,74 @@ val fooService: FooService[IO] = futureFoo.asyncMapK[IO]
 ## Twitter Futures
 
 The same structure works for Twitter Futures. Just replace `import com.dwolla.util.async.stdlib._` with `com.dwolla.util.async.twitter._` in the example above.
+
+## Artifacts
+
+The Group ID for each artifact is `"com.dwolla"`. All artifacts are published to Maven Central.
+
+<table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>Description</th>
+<th align="center">Cats Effect Version</th>
+<th align="center">Scala 2.12</th>
+<th align="center">Scala 2.13</th>
+<th align="center">Scala.js</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"async-utils-ce2"</code></td>
+<td rowspan="2">Implementation for stdlib Scala <code>Future</code></td>
+<td align="center">Cats Effect 2</td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+</tr>
+<tr>
+<td><code>"async-utils-ce3"</code></td>
+<td align="center">Cats Effect 3</td>
+</tr>
+<tr>
+<td><code>"async-utils-twitter-ce2"</code></td>
+<td rowspan="2">Implementation for Twitter <code>Future</code></td>
+<td align="center">Cats Effect 2</td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="no_entry_sign" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f6ab.png">🚫</g-emoji></td>
+</tr>
+<tr>
+<td><code>"async-utils-twitter-ce3"</code></td>
+<td align="center">Cats Effect 3</td>
+</tr>
+<tr>
+<td><code>"async-utils-twitter-19-4-ce2"</code></td>
+<td rowspan="2">Implementation for Twitter <code>Future</code><br>(with <code>"com.twitter" %% "util-core" % "19.4.0"</code>)</td>
+<td align="center">Cats Effect 2</td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="no_entry_sign" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f6ab.png">🚫</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="no_entry_sign" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f6ab.png">🚫</g-emoji></td>
+</tr>
+<tr>
+<td><code>"async-utils-twitter-19-4-ce3"</code></td>
+<td align="center">Cats Effect 3</td>
+</tr>
+<tr>
+<td><code>"async-utils-core-ce2"</code></td>
+<td rowspan="2">Shared definition of <code>AsyncFunctorK</code> and supporting code</td>
+<td align="center">Cats Effect 2</td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+</tr>
+<tr>
+<td><code>"async-utils-core-ce3"</code></td>
+<td align="center">Cats Effect 3</td>
+</tr>
+</tbody>
+</table>
+
+## Credits
+
+Thanks to [Georgi Krastev and the cats-tagless project](https://github.com/typelevel/cats-tagless/pull/250/files) for the idea to use `ReaderT` in this way.
