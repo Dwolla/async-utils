@@ -213,6 +213,35 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
   )
   .dependsOn(`async-utils-core`)
 
+lazy val `async-utils-finagle` = (projectMatrix in file("twitter-finagle"))
+  .customRow(
+    scalaVersions = Scala2Versions,
+    axisValues = Seq(CatsEffect2, TwitterUtilsLatest, VirtualAxis.jvm),
+    _.settings(
+      moduleName := name.value + "-ce2",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
+      libraryDependencies ++= {
+        Seq(
+          "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      }
+    )
+  )
+  .customRow(
+    scalaVersions = Scala2Versions,
+    axisValues = Seq(CatsEffect3, TwitterUtilsLatest, VirtualAxis.jvm),
+    _.settings(
+      moduleName := name.value + "-ce3",
+      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
+      libraryDependencies ++= {
+        Seq(
+          "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      }
+    )
+  )
+  .dependsOn(`async-utils-twitter`)
+
 lazy val examples = (projectMatrix in file("examples"))
   .settings(
     libraryDependencies ++= {
@@ -231,6 +260,7 @@ lazy val `async-utils-root` = (project in file("."))
       `async-utils-core`,
       `async-utils`,
       `async-utils-twitter`,
+      `async-utils-finagle`,
       examples,
     ).flatMap(_.projectRefs): _*
   )
