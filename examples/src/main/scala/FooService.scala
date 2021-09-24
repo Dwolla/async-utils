@@ -1,6 +1,6 @@
-import cats.data._
 import cats.effect._
 import cats.tagless._
+import com.dwolla.util.async.AlgReaderT
 import com.dwolla.util.async.stdlib._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -10,7 +10,7 @@ trait FooService[F[_]] {
 }
 
 object FooService {
-  implicit def FooServiceReaderT[F[_]]: FooService[ReaderT[F, FooService[F], *]] =
+  implicit def FooServiceReaderT[F[_]]: AlgReaderT[F, FooService] =
     Derive.readerT[FooService, F]
   implicit val FooServiceFunctorK: FunctorK[FooService] = Derive.functorK
 }
