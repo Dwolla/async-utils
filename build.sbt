@@ -21,6 +21,7 @@ lazy val CatsEffect3V = "3.2.9"
 lazy val TwitterUtilsLatestV = "21.8.0"
 lazy val TwitterUtils19_4V = "19.4.0"
 lazy val CatsTaglessV = "0.14.0"
+lazy val libthriftV = "0.10.0"
 
 lazy val SCALA_2_13 = "2.13.6"
 lazy val SCALA_2_12 = "2.12.15"
@@ -252,6 +253,63 @@ lazy val examples = (projectMatrix in file("examples"))
   .jvmPlatform(scalaVersions = Scala2Versions)
   .dependsOn(`async-utils`)
 
+lazy val `scalafix-rules` = (projectMatrix in file("scalafix/rules"))
+  .jvmPlatform(scalaVersions = Scala2Versions)
+  .settings(
+    moduleName := "finagle-tagless-scalafix",
+    libraryDependencies ++= Seq(
+      "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
+
+    ),
+    scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
+  )
+
+lazy val `scalafix-input` = (project in file("scalafix/input"))
+  .settings(
+    publish / skip := true,
+    scalaVersion := Scala2Versions.head,
+    libraryDependencies ++= Seq(
+      "com.twitter" %% "scrooge-core" % TwitterUtilsLatestV,
+      "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
+      "org.apache.thrift" % "libthrift" % libthriftV,
+    ),
+    scalacOptions += "-nowarn",
+    scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
+  )
+  .disablePlugins(ScalafixPlugin)
+
+lazy val `scalafix-output` = (project in file("scalafix/output"))
+  .settings(
+    publish / skip := true,
+    scalaVersion := Scala2Versions.head,
+    libraryDependencies ++= Seq(
+      "com.twitter" %% "scrooge-core" % TwitterUtilsLatestV,
+      "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
+      "org.apache.thrift" % "libthrift" % libthriftV,
+      "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
+      "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
+    ),
+    scalacOptions += "-nowarn",
+    scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
+  )
+  .disablePlugins(ScalafixPlugin)
+
+lazy val `scalafix-tests` = (projectMatrix in file("scalafix/tests"))
+  .jvmPlatform(scalaVersions = Scala2Versions)
+  .settings(
+    publish / skip := true,
+    libraryDependencies += "ch.epfl.scala" % "scalafix-testkit" % _root_.scalafix.sbt.BuildInfo.scalafixVersion % Test cross CrossVersion.full,
+    scalafixTestkitOutputSourceDirectories := (`scalafix-output` / Compile / unmanagedSourceDirectories).value,
+    scalafixTestkitInputSourceDirectories := (`scalafix-input` / Compile / unmanagedSourceDirectories).value,
+    scalafixTestkitInputClasspath := (`scalafix-input` / Compile / fullClasspath).value,
+    scalafixTestkitInputScalacOptions := (`scalafix-input` / Compile / scalacOptions).value,
+    scalafixTestkitInputScalaVersion := (`scalafix-input` / Compile / scalaVersion).value,
+  )
+  .dependsOn(`scalafix-rules`)
+  .enablePlugins(ScalafixTestkitPlugin)
+
 lazy val `async-utils-root` = (project in file("."))
   .aggregate(
     Seq(
@@ -259,6 +317,8 @@ lazy val `async-utils-root` = (project in file("."))
       `async-utils`,
       `async-utils-twitter`,
       `async-utils-finagle`,
+      `scalafix-rules`,
+      `scalafix-tests`,
       examples,
     ).flatMap(_.projectRefs): _*
   )
