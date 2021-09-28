@@ -16,21 +16,19 @@ inThisBuild(List(
   startYear := Option(2021),
 ))
 
-lazy val CatsEffect2V = "2.5.1"
-lazy val CatsEffect3V = "3.1.1"
-lazy val TwitterUtilsLatestV = "21.5.0"
+lazy val CatsEffect2V = "2.5.4"
+lazy val CatsEffect3V = "3.2.9"
+lazy val TwitterUtilsLatestV = "21.8.0"
 lazy val TwitterUtils19_4V = "19.4.0"
 lazy val CatsTaglessV = "0.14.0"
 
 lazy val SCALA_2_13 = "2.13.6"
-lazy val SCALA_2_12 = "2.12.14"
-lazy val SCALA_3 = "3.0.0"
+lazy val SCALA_2_12 = "2.12.15"
 
 lazy val Scala2Versions = Seq(SCALA_2_13, SCALA_2_12)
-lazy val Scala2And3 = Seq(SCALA_2_13, SCALA_2_12, SCALA_3)
 
 lazy val scala2CompilerPlugins: Seq[ModuleID] = Seq(
-  compilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full)
+  compilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
 )
 
 def dedupKindProjectorOptions(opts: Seq[String]): Seq[String] =
@@ -246,7 +244,7 @@ lazy val examples = (projectMatrix in file("examples"))
   .settings(
     libraryDependencies ++= {
       Seq(
-        "org.typelevel" %% "cats-tagless-macros" % "0.14.0",
+        "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
       ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
     },
     publish / skip := true,
