@@ -31,7 +31,7 @@ libraryDependencies ++= {
 (Compile / scroogeThriftOutputFolder) := file("src/main/scala")
 __EOF__
 
-sbt compile
+sbt scroogeGen
 find "../output/${GENERATED_SOURCES}" -name "*.scala" -delete
 cp "${GENERATED_SOURCES}"/* "../output/${GENERATED_SOURCES}/"
 find src/main/scala -name "*.scala" -print0 | \

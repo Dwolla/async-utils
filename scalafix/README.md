@@ -21,13 +21,10 @@ blank line at the end of the `SimpleService` object with these lines:
 
 ```scala
 
-
   implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
     _root_.cats.tagless.Derive.readerT[SimpleService, F]
 
   implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
-
-
 ```
 
 (Newlines and whitespace matter to the tests!)

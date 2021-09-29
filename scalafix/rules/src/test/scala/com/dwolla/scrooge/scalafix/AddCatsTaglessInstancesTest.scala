@@ -10,6 +10,11 @@ object AddCatsTaglessInstancesTest extends App {
     f"""trait SimpleService[F[_]]
        |object SimpleService extends _root_.com.twitter.finagle.thrift.GeneratedThriftService { self =>
        |  val annotations: immutable$$Map[String, String] = immutable$$Map.empty
+       |
+       |  implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
+       |    _root_.cats.tagless.Derive.readerT[SimpleService, F]
+       |
+       |  implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
        |}
        |trait Bar
        |trait Baz[F]

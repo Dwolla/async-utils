@@ -1068,11 +1068,8 @@ object SimpleService extends _root_.com.twitter.finagle.thrift.GeneratedThriftSe
     }
   }
 
-
   implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
     _root_.cats.tagless.Derive.readerT[SimpleService, F]
 
   implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
-
-
 }
