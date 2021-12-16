@@ -17,7 +17,7 @@ inThisBuild(List(
 ))
 
 lazy val CatsEffect2V = "2.5.4"
-lazy val CatsEffect3V = "3.2.9"
+lazy val CatsEffect3V = "3.3.0"
 lazy val TwitterUtilsLatestV = "21.8.0"
 lazy val TwitterUtils19_4V = "19.4.0"
 lazy val CatsTaglessV = "0.14.0"
