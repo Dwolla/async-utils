@@ -23,7 +23,7 @@ lazy val TwitterUtils19_4V = "19.4.0"
 lazy val CatsTaglessV = "0.14.0"
 lazy val libthriftV = "0.10.0"
 
-lazy val SCALA_2_13 = "2.13.6"
+lazy val SCALA_2_13 = "2.13.7"
 lazy val SCALA_2_12 = "2.12.15"
 
 lazy val Scala2Versions = Seq(SCALA_2_13, SCALA_2_12)
