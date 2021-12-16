@@ -9,8 +9,8 @@ import com.twitter.finagle.{ListeningServer, Thrift}
 import com.twitter.util.{Future, Promise}
 
 object ThriftServer {
-  def apply[F[_] : Effect : ContextShift, Thrift[_[_]] <: AnyRef : FunctorK](addr: String, iface: Thrift[F]): F[Nothing] =
-    Resource.make(acquire[F, Thrift](addr, unsafeMapKToFuture(iface)))(release[F]).use[F, Nothing](_ => Async[F].never[Nothing])
+  def apply[F[_] : Effect : ContextShift, Thrift[_[_]] <: AnyRef : FunctorK](addr: String, iface: Thrift[F]): Resource[F, ListeningServer] =
+    Resource.make(acquire[F, Thrift](addr, unsafeMapKToFuture(iface)))(release[F])
 
   private def unsafeMapKToFuture[F[_] : Effect, Thrift[_[_]] <: AnyRef : FunctorK](iface: Thrift[F]): Thrift[Future] =
     iface.mapK(new (F ~> Future) {

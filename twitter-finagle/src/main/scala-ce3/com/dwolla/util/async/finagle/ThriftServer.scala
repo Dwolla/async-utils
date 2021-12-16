@@ -15,11 +15,10 @@ import scala.util.{Failure, Success}
 
 object ThriftServer {
   def apply[F[_] : Async, Thrift[_[_]] <: AnyRef : FunctorK](addr: String, iface: Thrift[F])
-                                                            (implicit ec: ExecutionContext): F[Nothing] =
+                                                            (implicit ec: ExecutionContext): Resource[F, ListeningServer] =
     Dispatcher[F]
       .evalMap(unsafeMapKToFuture(_, iface).pure[F])
       .flatMap(t => Resource.make(acquire[F, Thrift](addr, t))(release[F]))
-      .useForever
 
   private def unsafeMapKToFuture[F[_], Thrift[_[_]] <: AnyRef : FunctorK](dispatcher: Dispatcher[F], iface: Thrift[F])
                                                                          (implicit ec: ExecutionContext): Thrift[Future] =
