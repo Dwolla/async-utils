@@ -17,13 +17,13 @@ inThisBuild(List(
 ))
 
 lazy val CatsEffect2V = "2.5.4"
-lazy val CatsEffect3V = "3.2.9"
+lazy val CatsEffect3V = "3.3.0"
 lazy val TwitterUtilsLatestV = "21.8.0"
 lazy val TwitterUtils19_4V = "19.4.0"
 lazy val CatsTaglessV = "0.14.0"
 lazy val libthriftV = "0.10.0"
 
-lazy val SCALA_2_13 = "2.13.6"
+lazy val SCALA_2_13 = "2.13.7"
 lazy val SCALA_2_12 = "2.12.15"
 
 lazy val Scala2Versions = Seq(SCALA_2_13, SCALA_2_12)
