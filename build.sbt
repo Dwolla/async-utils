@@ -232,7 +232,8 @@ lazy val `scalafix-rules` = (projectMatrix in file("scalafix/rules"))
     moduleName := "finagle-tagless-scalafix",
     libraryDependencies ++= Seq(
       "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
-
+      "org.scalameta" %% "munit" % "0.7.29" % Test,
+      "com.eed3si9n.expecty" %% "expecty" % "0.15.4" % Test,
     ),
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
   )

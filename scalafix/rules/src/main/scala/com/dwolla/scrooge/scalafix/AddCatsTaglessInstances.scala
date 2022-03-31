@@ -1,36 +1,213 @@
 package com.dwolla.scrooge.scalafix
 
+import com.dwolla.scrooge.scalafix.AddCatsTaglessInstances._
 import scalafix.v1._
 
 import scala.meta._
+import scala.meta.tokens.Token.Ident
+import GuardedPatchBuilder.toGuardedPatch
 
-class AddCatsTaglessInstances extends SemanticRule("AddCatsTaglessInstances") {
-  override def fix(implicit doc: SemanticDocument): Patch =
-    Patch.fromIterable(addImplicitsToCompanionObjects)
+object ThriftServiceTrait {
+  def unapply(subtree: Tree): Option[(String, Defn.Trait)] =
+    PartialFunction.condOpt(subtree) {
+      case term@Defn.Trait(_, Type.Name(name), Nil, _, ExtendsThriftService(_)) => (name, term)
+    }
+}
 
-  private def buildThriftServiceFromTrait(alg: Defn.Trait)
-                                         (implicit doc: SemanticDocument): ThriftService = {
+object ExtendsThriftService {
+  def unapply(subtree: Tree): Option[Template] =
+    TemplateExtends("ThriftService")(subtree)
+}
+
+object ExtendsGeneratedThriftService {
+  def unapply(subtree: Tree): Option[Template] =
+    TemplateExtends("GeneratedThriftService")(subtree)
+}
+
+object InitsContainName {
+  def apply(name: String)
+           (inits: List[Init]): Option[Init] =
+    inits.find {
+      _.tpe.collect {
+        case Type.Select(_, Type.Name(`name`)) => ()
+        case Type.Name(`name`) => ()
+      }.nonEmpty
+    }
+}
+
+object TemplateExtends {
+  def apply(name: String): Tree => Option[Template] = subtree => { 
+    object TemplateInitsContainName {
+      def unapply(inits: List[Init]): Option[Init] =
+        InitsContainName(name)(inits)
+    }
+
+    PartialFunction.condOpt(subtree) {
+      case t@Template(_, TemplateInitsContainName(_), _, _) => t
+    }
+  }
+}
+
+object AddCatsTaglessInstances {
+  private def buildThriftServiceFromTrait(tree: Tree, alg: Defn.Trait): ThriftService = {
     val name = alg.name.value
 
     val companion =
-      doc
-        .tree
+      tree
         .collect {
           case obj@Defn.Object(_, Term.Name(`name`), _) => obj
         }
         .headOption
 
-      ThriftService(alg, companion)
+    ThriftService(alg, companion)
   }
 
-  private def addImplicitsToCompanionObjects(implicit doc: SemanticDocument): List[Patch] =
-    doc
-      .tree
+  def addImplicitsToCompanionObjects(tree: Tree): List[Patch] =
+    tree
       .collect {
         case TraitWithTypeConstructor(name) => name
       }
-      .map(buildThriftServiceFromTrait)
+      .map(buildThriftServiceFromTrait(tree, _))
       .map(_.toPatch)
+
+  def addServiceTrait(tree: Tree): List[Patch] =
+    tree
+      .collect {
+        // find each object that extends the com.twitter.finagle.thrift.GeneratedThriftService interface
+        // these are the root objects that contain all the generated traits we need to modify and augment
+        case t@Defn.Object(_, _, ExtendsGeneratedThriftService(_)) => t
+      }
+      .flatMap { companionObjectTree =>
+        companionObjectTree
+          .collect {
+            // find each trait that extends the com.twitter.finagle.thrift.ThriftService interface
+            // these are the interfaces we want to modify to add a higher kinded type parameter F[_],
+            // and replace Future with the new F
+            case ThriftServiceTrait("MethodPerEndpoint", defn) =>
+              ThriftServiceTrait(companionObjectTree, defn)
+          }
+          .map(_.toPatch)
+      }
+}
+
+case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Object,
+                              private val thriftServiceTrait: Defn.Trait) {
+  private object ExtendsServiceTrait {
+    def unapply(subtree: Tree): Option[Template] =
+      TemplateExtends(generatedThriftServiceObject.name.value)(subtree)
+  }
+
+  private def allInstances: List[ImplicitInstance] = List(
+    ImplicitInstance.AlgebraInKleisli(generatedThriftServiceObject.name.value),
+    ImplicitInstance.FunctorK(generatedThriftServiceObject.name.value),
+  )
+
+  private def code(instances: List[ImplicitInstance]): String =
+    instances.map(_.code).mkString("", "\n", "")
+
+  private val companionObjectWithImplicits =
+    s"""|
+        |
+        |  object ${generatedThriftServiceObject.name.value} {
+        |${code(allInstances)}
+        |  }
+        |""".stripMargin
+
+  private def renameMethodPerEndpoint(methodPerEndpoint: Type.Name): Patch =
+    methodPerEndpoint.tokens.find {
+      case Ident("MethodPerEndpoint") => true
+      case _ => false
+    }
+      .map(Patch.replaceToken(_, s"${generatedThriftServiceObject.name.value}[F[_]]"))
+      .onlyIfMissing {
+        case Defn.Trait(_, Type.Name(name), _, _, _) if name == generatedThriftServiceObject.name.value => ()
+      }
+      .in(generatedThriftServiceObject)
+
+  private val addServiceCompanionObjectWithImplicits: Patch =
+    Patch.addRight(thriftServiceTrait, companionObjectWithImplicits)
+      .onlyIfMissing {
+        case Defn.Object(_, Term.Name(name), Template(_, List(), _, _)) if name == generatedThriftServiceObject.name.value => ()
+      }
+      .in(generatedThriftServiceObject)
+  
+  private val addReplacementMethodPerEndpointTrait: Patch =
+    Patch.addRight(thriftServiceTrait,
+      s"""
+         |  trait MethodPerEndpoint extends ${generatedThriftServiceObject.name.value}[Future]""".stripMargin)
+      .onlyIfMissing {
+        case Defn.Trait(_, Type.Name("MethodPerEndpoint"), _, _, ExtendsServiceTrait(_)) => ()
+      }
+      .in(generatedThriftServiceObject)
+
+  def toPatch: Patch =
+    Patch.fromIterable {
+      thriftServiceTrait
+        .collect {
+          // rename MethodPerEndpoint to {Name}Service[F[_]], add {Name}Service companion object with 
+          case t@Type.Name("MethodPerEndpoint") =>
+            Patch.fromIterable {
+              List(
+                renameMethodPerEndpoint(t),
+                addServiceCompanionObjectWithImplicits,
+                addReplacementMethodPerEndpointTrait,
+              )
+            }
+
+          // replace Future[*] with F[*]
+          case t@Type.Name("Future") =>
+            t.parent.fold(Patch.empty) {
+              Patch.replaceToken(t.tokens.head, "F")
+                .onlyIfMissing {
+                  case Type.Apply(Type.Name(name), _) if name == generatedThriftServiceObject.name.value => ()
+                }
+                .in(_)
+            }
+        }
+    }
+}
+
+class GuardedPatch(private val tuple: (Patch, PartialFunction[Tree, _])) extends AnyVal {
+  def in(tree: Tree): Patch = {
+    val empty = tree.collect(tuple._2).isEmpty
+    if (empty) tuple._1
+    else Patch.empty
+  }
+}
+
+class GuardedPatchBuilder(private val patch: Patch) extends AnyVal {
+  def onlyIfMissing(pf: PartialFunction[Tree, _]) = new GuardedPatch(patch -> pf)
+}
+
+object GuardedPatchBuilder {
+  implicit def toGuardedPatch(patch: Patch): GuardedPatchBuilder = new GuardedPatchBuilder(patch)
+  implicit def toGuardedPatch(patch: Option[Patch]): GuardedPatchBuilder = new GuardedPatchBuilder(patch.getOrElse(Patch.empty))
+}
+
+sealed trait IdempotentPatch {
+  val patch: Patch
+}
+case object AlreadyApplied extends IdempotentPatch {
+  val patch: Patch = Patch.empty
+}
+case class Unapplied(patch: Patch) extends IdempotentPatch
+
+object IdempotentPatch {
+  def apply(patch: Patch)
+           (tree: Tree)
+           (pf: PartialFunction[Tree, _]): IdempotentPatch =
+    if (tree.collect(pf).nonEmpty) AlreadyApplied
+    else Unapplied(patch)
+
+  def apply(patch: Option[Patch])
+           (tree: Tree)
+           (pf: PartialFunction[Tree, _]): IdempotentPatch =
+    IdempotentPatch(patch.getOrElse(Patch.empty))(tree)(pf)
+}
+
+class AddCatsTaglessInstances extends SemanticRule("AddCatsTaglessInstances") {
+  override def fix(implicit doc: SemanticDocument): Patch =
+    Patch.fromIterable(addServiceTrait(doc.tree) ++ addImplicitsToCompanionObjects(doc.tree))
 }
 
 case class ThriftService(alg: Defn.Trait,
@@ -82,14 +259,14 @@ sealed trait ImplicitInstance {
 object ImplicitInstance {
   case class AlgebraInKleisli(name: String) extends ImplicitInstance {
     def code: String =
-      s"""  implicit def ${name}InReaderT[F[_]]: $name[({type Λ[β0] = _root_.cats.data.ReaderT[F, $name[F], β0]})#Λ] =
-         |    _root_.cats.tagless.Derive.readerT[$name, F]
+      s"""    implicit def ${name}InReaderT[F[_]]: $name[({type Λ[β0] = _root_.cats.data.ReaderT[F, $name[F], β0]})#Λ] =
+         |      _root_.cats.tagless.Derive.readerT[$name, F]
          |""".stripMargin
   }
 
   case class FunctorK(name: String) extends ImplicitInstance {
     def code: String =
-      s"  implicit val ${name}FunctorK: _root_.cats.tagless.FunctorK[$name] = _root_.cats.tagless.Derive.functorK[$name]"
+      s"    implicit val ${name}FunctorK: _root_.cats.tagless.FunctorK[$name] = _root_.cats.tagless.Derive.functorK[$name]"
   }
 }
 

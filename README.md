@@ -137,6 +137,21 @@ Add Scalafix to your project's build by [following the instructions](https://sca
     }
     ```
 
+### `AddCatsTaglessInstances`
+
+The `AddCatsTaglessInstances` rule finds generated Thrift service traits and adds implicit instances of
+`ThriftService[Kleisli[F, ThriftService[Future], *]]` and `FunctorK[ThriftService]` to each service's
+companion object.
+
+Twitter's Scrooge project changed the way it generates code for Thrift services, removing the
+higher-kinded service trait used by this library, leaving only the `MethodPerEndpoint` trait
+that used to extend the higher-kinded service trait, setting the type parameter to `com.twitter.util.Future`.
+The `AddCatsTaglessInstances` rule now addresses this as well, rewriting `MethodPerEndpoint` to
+`{Name}Service` and reintroducing the type parameter. (A new `MethodPerEndpoint` is also added, 
+going back to how it used to `extend {Name}Service[Future]`.)
+
+This Scalafix rule should be idempotent, so it can be rerun many times.
+
 ## Artifacts
 
 The Group ID for each artifact is `"com.dwolla"`. All artifacts are published to Maven Central.

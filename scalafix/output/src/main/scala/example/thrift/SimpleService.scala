@@ -737,15 +737,24 @@ object SimpleService extends _root_.com.twitter.finagle.thrift.GeneratedThriftSe
   type makeRequest$result = MakeRequest.Result
 
 
-  trait MethodPerEndpoint extends _root_.com.twitter.finagle.thrift.ThriftService {
+  trait SimpleService[F[_]] extends _root_.com.twitter.finagle.thrift.ThriftService {
     
-    def makeRequest(request: example.thrift.SimpleRequest): Future[example.thrift.SimpleResponse]
+    def makeRequest(request: example.thrift.SimpleRequest): F[example.thrift.SimpleResponse]
     /**
      * Used to close the underlying `Service`.
      * Not a user-defined API.
      */
     def asClosable: _root_.com.twitter.util.Closable = _root_.com.twitter.util.Closable.nop
   }
+
+  object SimpleService {
+    implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
+      _root_.cats.tagless.Derive.readerT[SimpleService, F]
+
+    implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
+  }
+
+  trait MethodPerEndpoint extends SimpleService[Future]
 
   object MethodPerEndpoint {
 
