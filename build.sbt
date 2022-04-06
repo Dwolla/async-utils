@@ -252,6 +252,7 @@ lazy val `scalafix-input` = (project in file("scalafix/input"))
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
   )
+  .dependsOn(`scalafix-input-dependency`)
   .disablePlugins(ScalafixPlugin)
 
 lazy val `scalafix-output` = (project in file("scalafix/output"))
@@ -268,6 +269,7 @@ lazy val `scalafix-output` = (project in file("scalafix/output"))
     scalacOptions += "-nowarn",
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
   )
+  .dependsOn(`scalafix-output-dependency`)
   .disablePlugins(ScalafixPlugin)
 
 lazy val `scalafix-tests` = (projectMatrix in file("scalafix/tests"))
@@ -283,6 +285,32 @@ lazy val `scalafix-tests` = (projectMatrix in file("scalafix/tests"))
   )
   .dependsOn(`scalafix-rules`)
   .enablePlugins(ScalafixTestkitPlugin)
+
+lazy val `scalafix-input-dependency` = (project in file("scalafix/input-dependency"))
+  .settings(
+    publish / skip := true,
+    scalaVersion := Scala2Versions.head,
+    libraryDependencies ++= {
+      Seq(
+        "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
+        "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
+        "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
+      )
+    },
+  )
+
+lazy val `scalafix-output-dependency` = (project in file("scalafix/output-dependency"))
+  .settings(
+    publish / skip := true,
+    scalaVersion := Scala2Versions.head,
+    libraryDependencies ++= {
+      Seq(
+        "com.twitter" %% "util-core" % TwitterUtilsLatestV,
+        "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
+        "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
+      )
+    },
+  )
 
 lazy val `async-utils-root` = (project in file("."))
   .aggregate(
