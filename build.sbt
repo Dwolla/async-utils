@@ -18,8 +18,7 @@ inThisBuild(List(
 
 lazy val CatsEffect2V = "2.5.4"
 lazy val CatsEffect3V = "3.3.11"
-lazy val TwitterUtilsLatestV = "21.8.0"
-lazy val TwitterUtils19_4V = "19.4.0"
+lazy val TwitterUtilsLatestV = "22.3.0"
 lazy val CatsTaglessV = "0.14.0"
 lazy val libthriftV = "0.10.0"
 
@@ -158,7 +157,7 @@ lazy val `async-utils` = (projectMatrix in file("scala-futures"))
 lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
   .customRow(
     scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, TwitterUtilsLatest, VirtualAxis.jvm),
+    axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce2",
       Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
@@ -172,7 +171,7 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
   )
   .customRow(
     scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, TwitterUtilsLatest, VirtualAxis.jvm),
+    axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce3",
       Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
@@ -184,38 +183,12 @@ lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
       }
     )
   )
-  .customRow(
-    scalaVersions = Seq(SCALA_2_12),
-    axisValues = Seq(CatsEffect2, TwitterUtils19_4, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-19-4-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect2V,
-          "com.twitter" %% "util-core" % TwitterUtils19_4V,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-  )
-  .customRow(
-    scalaVersions = Seq(SCALA_2_12),
-    axisValues = Seq(CatsEffect3, TwitterUtils19_4, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-19-4-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
-          "com.twitter" %% "util-core" % TwitterUtils19_4V,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-  )
   .dependsOn(`async-utils-core`)
 
 lazy val `async-utils-finagle` = (projectMatrix in file("twitter-finagle"))
   .customRow(
     scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, TwitterUtilsLatest, VirtualAxis.jvm),
+    axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce2",
       Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
@@ -228,7 +201,7 @@ lazy val `async-utils-finagle` = (projectMatrix in file("twitter-finagle"))
   )
   .customRow(
     scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, TwitterUtilsLatest, VirtualAxis.jvm),
+    axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
     _.settings(
       moduleName := name.value + "-ce3",
       Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
@@ -259,7 +232,8 @@ lazy val `scalafix-rules` = (projectMatrix in file("scalafix/rules"))
     moduleName := "finagle-tagless-scalafix",
     libraryDependencies ++= Seq(
       "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
-
+      "org.scalameta" %% "munit" % "0.7.29" % Test,
+      "com.eed3si9n.expecty" %% "expecty" % "0.15.4" % Test,
     ),
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
   )

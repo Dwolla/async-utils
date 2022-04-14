@@ -106,7 +106,7 @@ Add Scalafix to your project's build by [following the instructions](https://sca
 
 1. Add the Scalafix plugin to the project by adding this to `project/plugins.sbt`:
     ```scala
-    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.31")
+    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.34")
     ```
 
 2. Enable SemanticDB by adding this to `build.sbt`:
@@ -114,7 +114,7 @@ Add Scalafix to your project's build by [following the instructions](https://sca
     ThisBuild / semanticdbEnabled := true
     ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
     ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
-    ThisBuild / scalafixDependencies += "com.dwolla" %% "finagle-tagless-scalafix" % "0.0.4"
+    ThisBuild / scalafixDependencies += "com.dwolla" %% "finagle-tagless-scalafix" % "0.0.7"
     ```
 
 3. Run the Scalafix rule automatically after generating the Thrift sources by adding this to `build.sbt`:
@@ -136,6 +136,21 @@ Add Scalafix to your project's build by [following the instructions](https://sca
       )
     }
     ```
+
+### `AddCatsTaglessInstances`
+
+The `AddCatsTaglessInstances` rule finds generated Thrift service traits and adds implicit instances of
+`ThriftService[Kleisli[F, ThriftService[Future], *]]` and `FunctorK[ThriftService]` to each service's
+companion object.
+
+Twitter's Scrooge project changed the way it generates code for Thrift services, removing the
+higher-kinded service trait used by this library, leaving only the `MethodPerEndpoint` trait
+that used to extend the higher-kinded service trait, setting the type parameter to `com.twitter.util.Future`.
+The `AddCatsTaglessInstances` rule now addresses this as well, rewriting `MethodPerEndpoint` to
+`{Name}Service` and reintroducing the type parameter. (A new `MethodPerEndpoint` is also added, 
+going back to how it used to `extend {Name}Service[Future]`.)
+
+This Scalafix rule should be idempotent, so it can be rerun many times.
 
 ## Artifacts
 
@@ -196,18 +211,6 @@ The Group ID for each artifact is `"com.dwolla"`. All artifacts are published to
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 <td align="center">N/A</td>
-</tr>
-<tr>
-<td><code>"async-utils-twitter-19-4-ce2"</code></td>
-<td rowspan="2">Implementation for Twitter <code>Future</code><br>(with <code>"com.twitter" %% "util-core" % "19.4.0"</code>)</td>
-<td align="center">Cats Effect 2</td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="no_entry_sign" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f6ab.png">🚫</g-emoji></td>
-<td align="center" rowspan="2"><g-emoji class="g-emoji" alias="no_entry_sign" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f6ab.png">🚫</g-emoji></td>
-</tr>
-<tr>
-<td><code>"async-utils-twitter-19-4-ce3"</code></td>
-<td align="center">Cats Effect 3</td>
 </tr>
 <tr>
 <td><code>"async-utils-core-ce2"</code></td>
