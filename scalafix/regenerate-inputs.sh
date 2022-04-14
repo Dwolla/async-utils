@@ -11,7 +11,7 @@ SCROOGE_VERSION=$1
 cd input
 find "${GENERATED_SOURCES}" -name "*.scala" -delete
 mkdir -p project
-echo sbt.version=1.5.5 > project/build.properties
+echo sbt.version=1.6.2 > project/build.properties
 cat << __EOF__ > project/plugins.sbt
 addSbtPlugin("com.twitter" % "scrooge-sbt-plugin" % "${SCROOGE_VERSION}")
 __EOF__
