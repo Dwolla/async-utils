@@ -152,6 +152,34 @@ going back to how it used to `extend {Name}Service[Future]`.)
 
 This Scalafix rule should be idempotent, so it can be rerun many times.
 
+### `AdaptHigherKindedThriftCode`
+
+Because the `AddCatsTaglessInstances` rewrite rule couldn't easily move the new `{Name}Service` trait up
+to the same level as the `{Name}Service` object, the new traits must be addressed differently. In other
+words, instead of finding the trait at `com.example.ThriftService`, it will now be 
+at `com.example.ThriftService.ThriftService`.
+
+The `AdaptHigherKindedThriftCode` rule exists to adapt existing code to the new location. It will
+find references to traits that extend `com.twitter.finagle.thrift.ThriftService` and have a type 
+parameter of the correct shape, and add the object name before the trait name (i.e., rewriting 
+`ThriftService` to `ThriftService.ThriftService` or `com.example.ThriftService` to
+`com.example.ThriftService.ThriftService`).
+
+This rule is not idempotent, but it will typically only be executed once per codebase.
+
+The order in which the rule is executed matters. Follow these steps:
+
+1. Add Scalafix to your project by following steps 1 and 2 under "Scalafix Rule" above.
+2. Look at your project's sbt project graph. Because the rule is a semantic rule, it depends 
+   on the compiler being able to compile the code it will modify. This means the leaves of
+   the project graph need to be updated before the nodes that depend on each leaf.
+   
+   For example, run `Test/scalafix AdaptHigherKindedThriftCode` before 
+   running `Compile/scalafix AdaptHigherKindedThriftCode`.
+3. Only after running the `AdaptHigherKindedThriftCode` rule should you update the Scrooge
+   and Finagle version being used in the project. Once this is updated, you can run the 
+   `AddCatsTaglessInstances` rule on the updated generated code.
+
 ## Artifacts
 
 The Group ID for each artifact is `"com.dwolla"`. All artifacts are published to Maven Central.
