@@ -2,11 +2,13 @@
 set -o errexit -o nounset -o pipefail
 IFS=$'\n\t'
 
-GENERATED_SOURCES="src/main/scala/example/thrift"
+GENERATED_SOURCES="src_managed/main/scala/example/thrift"
 
 set -x
 
 SCROOGE_VERSION=$1
+
+mkdir -p {input,output}/${GENERATED_SOURCES}
 
 cd input
 find "${GENERATED_SOURCES}" -name "*.scala" -delete
@@ -17,7 +19,7 @@ addSbtPlugin("com.twitter" % "scrooge-sbt-plugin" % "${SCROOGE_VERSION}")
 __EOF__
 
 cat << __EOF__ > build.sbt
-scalaVersion := "2.13.6"
+scalaVersion := "2.13.8"
 libraryDependencies ++= {
   val finagleV = "${SCROOGE_VERSION}"
 
@@ -28,13 +30,13 @@ libraryDependencies ++= {
   )
 }
 (Compile / scroogeBuildOptions) += com.twitter.scrooge.backend.WithFinagle
-(Compile / scroogeThriftOutputFolder) := file("src/main/scala")
+(Compile / scroogeThriftOutputFolder) := file("src_managed/main/scala")
 __EOF__
 
 sbt scroogeGen
 find "../output/${GENERATED_SOURCES}" -name "*.scala" -delete
 cp "${GENERATED_SOURCES}"/* "../output/${GENERATED_SOURCES}/"
-find src/main/scala -name "*.scala" -print0 | \
+find src_managed/main/scala -name "*.scala" -print0 | \
   xargs -0 -n1 \
     sed -i '' -e '1 i\
 /*rule = AddCatsTaglessInstances*/
