@@ -251,6 +251,7 @@ lazy val `scalafix-input` = (project in file("scalafix/input"))
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
+    Compile / unmanagedSourceDirectories += baseDirectory.value / "src_managed" / "main" / "scala",
   )
   .dependsOn(`scalafix-input-dependency`)
   .disablePlugins(ScalafixPlugin)
@@ -268,6 +269,7 @@ lazy val `scalafix-output` = (project in file("scalafix/output"))
     ),
     scalacOptions += "-nowarn",
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
+    Compile / unmanagedSourceDirectories += baseDirectory.value / "src_managed" / "main" / "scala",
   )
   .dependsOn(`scalafix-output-dependency`)
   .disablePlugins(ScalafixPlugin)
