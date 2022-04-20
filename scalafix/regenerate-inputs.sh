@@ -17,7 +17,7 @@ addSbtPlugin("com.twitter" % "scrooge-sbt-plugin" % "${SCROOGE_VERSION}")
 __EOF__
 
 cat << __EOF__ > build.sbt
-scalaVersion := "2.13.6"
+scalaVersion := "2.13.8"
 libraryDependencies ++= {
   val finagleV = "${SCROOGE_VERSION}"
 
