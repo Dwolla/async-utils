@@ -43,7 +43,7 @@ object AdaptHigherKindedThriftCode {
                                              (implicit doc: SemanticDocument): Patch =
     tree.collect {
       case t@Type.Name(name) if isGeneratedThriftService(t) =>
-        Patch.addLeft(t, s"$name.")
+        Patch.replaceTree(t, s"$name.${t.symbol.normalized.displayName}")
     }
       .fold(Patch.empty)(_ + _)
 }
