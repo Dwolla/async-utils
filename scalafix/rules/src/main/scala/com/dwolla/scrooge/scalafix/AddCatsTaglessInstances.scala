@@ -49,27 +49,6 @@ object TemplateExtends {
 }
 
 object AddCatsTaglessInstances {
-  private def buildThriftServiceFromTrait(tree: Tree, alg: Defn.Trait): ThriftService = {
-    val name = alg.name.value
-
-    val companion =
-      tree
-        .collect {
-          case obj@Defn.Object(_, Term.Name(`name`), _) => obj
-        }
-        .headOption
-
-    ThriftService(alg, companion)
-  }
-
-  def addImplicitsToCompanionObjects(tree: Tree): List[Patch] =
-    tree
-      .collect {
-        case TraitWithTypeConstructor(name) => name
-      }
-      .map(buildThriftServiceFromTrait(tree, _))
-      .map(_.toPatch)
-
   def addServiceTrait(tree: Tree): List[Patch] =
     tree
       .collect {
@@ -207,50 +186,7 @@ object IdempotentPatch {
 
 class AddCatsTaglessInstances extends SemanticRule("AddCatsTaglessInstances") {
   override def fix(implicit doc: SemanticDocument): Patch =
-    Patch.fromIterable(addServiceTrait(doc.tree) ++ addImplicitsToCompanionObjects(doc.tree))
-}
-
-case class ThriftService(alg: Defn.Trait,
-                         companion: Option[Defn.Object]) {
-  private def allInstances: List[ImplicitInstance] = List(
-    ImplicitInstance.AlgebraInKleisli(alg.name.value),
-    ImplicitInstance.FunctorK(alg.name.value),
-  )
-
-  private def code(instances: List[ImplicitInstance]): String =
-    instances.map(_.code).mkString("", "\n", "\n")
-
-  def toPatch: Patch =
-    companion match {
-      case None =>
-        val companionString =
-          s"""|
-              |object ${alg.name} {
-              |${code(allInstances)}
-              |}""".stripMargin
-
-        Patch.addRight(alg, companionString)
-      case Some(companion) =>
-        val algName = alg.name.value
-
-        val existingInstances = companion.collect {
-          case ImplicitDefAlgInReaderT(`algName`) => ImplicitInstance.AlgebraInKleisli(algName)
-          case ImplicitValFunctorK(`algName`) => ImplicitInstance.FunctorK(algName)
-        }.toSet[ImplicitInstance]
-
-        val instancesToAdd = allInstances.filterNot(existingInstances)
-
-        if (instancesToAdd.isEmpty) Patch.empty
-        else
-          companion.tokens.last match {
-            case brace@Token.RightBrace() =>
-              Patch.addLeft(brace, code(instancesToAdd))
-            case other => Patch.addRight(other,
-              s""" {
-                 |${code(instancesToAdd)}
-                 |}""".stripMargin)
-          }
-    }
+    Patch.fromIterable(addServiceTrait(doc.tree))
 }
 
 sealed trait ImplicitInstance {
