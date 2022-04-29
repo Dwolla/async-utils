@@ -76,6 +76,14 @@ class AddCatsTaglessInstancesTest extends FunSuite {
         |      _root_.cats.tagless.Derive.readerT[SimpleService, F]
         |
         |    implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
+        |
+        |    implicit def SimpleServiceHigherKindedToMethodPerEndpoint: _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] =
+        |      new _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] {
+        |        override type MPE = MethodPerEndpoint
+        |        override val mpeClassTag: _root_.scala.reflect.ClassTag[MethodPerEndpoint] = _root_.scala.reflect.classTag[MethodPerEndpoint]
+        |        override def toMethodPerEndpoint(hk: SimpleService[_root_.com.twitter.util.Future]): MethodPerEndpoint = MethodPerEndpoint(hk)
+        |      }
+        |
         |  }
         |)""".stripMargin
 

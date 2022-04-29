@@ -27,11 +27,7 @@ object FooService {
       new HigherKindedToMethodPerEndpoint[FooService] {
         override type MPE = MethodPerEndpoint
         override val mpeClassTag: ClassTag[MethodPerEndpoint] = classTag[MethodPerEndpoint]
-
-        override def toMethodPerEndpoint(hk: FooService[Future]): MethodPerEndpoint =
-          MethodPerEndpoint(hk)
-
-        override def fromMethodPerEndpoint(mpe: MethodPerEndpoint): FooService[Future] = mpe
+        override def toMethodPerEndpoint(hk: FooService[Future]): MethodPerEndpoint = MethodPerEndpoint(hk)
       }
   }
 
