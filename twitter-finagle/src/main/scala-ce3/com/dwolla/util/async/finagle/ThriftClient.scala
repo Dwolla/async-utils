@@ -31,7 +31,6 @@ object ThriftClient {
             .withRetryBudget(config.retryBudget)
             .build(dest)(HigherKindedToMethodPerEndpoint[Alg].mpeClassTag)
         }
-          .map(HigherKindedToMethodPerEndpoint[Alg].fromMethodPerEndpoint)
           .map(_.asyncMapK[G])
       val release: Alg[G] => G[Unit] = alg => liftFuture(Sync[G].delay(alg.asClosable.close()))
 

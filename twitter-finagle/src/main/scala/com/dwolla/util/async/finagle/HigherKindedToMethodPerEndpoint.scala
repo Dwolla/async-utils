@@ -23,11 +23,10 @@ import scala.reflect.ClassTag
  * @tparam Alg the higher-kinded service trait whose relationship to a `MethodPerEndpoint` trait is being encoded by the instance
  */
 trait HigherKindedToMethodPerEndpoint[Alg[_[_]]] {
-  type MPE <: AnyRef
+  type MPE <: Alg[Future] with AnyRef
   val mpeClassTag: ClassTag[MPE]
 
   def toMethodPerEndpoint(hk: Alg[Future]): MPE
-  def fromMethodPerEndpoint(mpe: MPE): Alg[Future]
 }
 
 object HigherKindedToMethodPerEndpoint {
