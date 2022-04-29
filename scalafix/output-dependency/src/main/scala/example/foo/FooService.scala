@@ -7,7 +7,10 @@
 
 package example.foo
 
-import com.twitter.util.Future
+import com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint
+import com.twitter.util._
+
+import scala.reflect.{ClassTag, classTag}
 
 object FooService {
   trait FooService[F[_]] {
@@ -20,7 +23,23 @@ object FooService {
 
     implicit val FooServiceFunctorK: _root_.cats.tagless.FunctorK[FooService] = _root_.cats.tagless.Derive.functorK[FooService]
 
+    implicit def FooServiceHigherKindedToMethodPerEndpoint: HigherKindedToMethodPerEndpoint[FooService] =
+      new HigherKindedToMethodPerEndpoint[FooService] {
+        override type MPE = MethodPerEndpoint
+        override val mpeClassTag: ClassTag[MethodPerEndpoint] = classTag[MethodPerEndpoint]
+
+        override def toMethodPerEndpoint(hk: FooService[Future]): MethodPerEndpoint =
+          MethodPerEndpoint(hk)
+
+        override def fromMethodPerEndpoint(mpe: MethodPerEndpoint): FooService[Future] = mpe
+      }
   }
 
   trait MethodPerEndpoint extends FooService[Future]
+
+  object MethodPerEndpoint {
+    def apply(fa: FooService[Future]): MethodPerEndpoint = new MethodPerEndpoint {
+      override def bar: Future[Unit] = fa.bar
+    }
+  }
 }

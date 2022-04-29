@@ -9,10 +9,10 @@ import com.twitter.finagle.{ListeningServer, Thrift}
 import com.twitter.util.{Future, Promise}
 
 object ThriftServer {
-  def apply[F[_] : Effect : ContextShift, Thrift[_[_]] <: AnyRef : FunctorK](addr: String, iface: Thrift[F]): Resource[F, ListeningServer] =
+  def apply[F[_] : Effect : ContextShift, Thrift[_[_]] : FunctorK : HigherKindedToMethodPerEndpoint](addr: String, iface: Thrift[F]): Resource[F, ListeningServer] =
     Resource.make(acquire[F, Thrift](addr, unsafeMapKToFuture(iface)))(release[F])
 
-  private def unsafeMapKToFuture[F[_] : Effect, Thrift[_[_]] <: AnyRef : FunctorK](iface: Thrift[F]): Thrift[Future] =
+  private def unsafeMapKToFuture[F[_] : Effect, Thrift[_[_]] : FunctorK](iface: Thrift[F]): Thrift[Future] =
     iface.mapK(new (F ~> Future) {
       override def apply[A](fa: F[A]): Future[A] = {
         val p = Promise[A]()
@@ -27,8 +27,8 @@ object ThriftServer {
       }
     })
 
-  private def acquire[F[_] : Sync, Thrift[_[_]] <: AnyRef](addr: String, iface: Thrift[Future]): F[ListeningServer] =
-    Sync[F].delay(Thrift.server.serveIface(addr, iface))
+  private def acquire[F[_] : Sync, Thrift[_[_]] : HigherKindedToMethodPerEndpoint](addr: String, iface: Thrift[Future]): F[ListeningServer] =
+    Sync[F].delay(Thrift.server.serveIface(addr, HigherKindedToMethodPerEndpoint[Thrift].toMethodPerEndpoint(iface)))
 
   private def release[F[_] : Async : ContextShift](s: ListeningServer): F[Unit] =
     liftFuture(Sync[F].delay(s.close()))

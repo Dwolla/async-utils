@@ -313,6 +313,7 @@ lazy val `scalafix-output-dependency` = (project in file("scalafix/output-depend
       )
     },
   )
+  .dependsOn(`async-utils-finagle`.finder(CatsEffect3, VirtualAxis.jvm).apply(Scala2Versions.head))
 
 lazy val `async-utils-root` = (project in file("."))
   .aggregate(
