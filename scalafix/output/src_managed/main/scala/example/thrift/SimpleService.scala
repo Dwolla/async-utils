@@ -752,11 +752,22 @@ object SimpleService extends _root_.com.twitter.finagle.thrift.GeneratedThriftSe
       _root_.cats.tagless.Derive.readerT[SimpleService, F]
 
     implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
+
+    implicit def SimpleServiceHigherKindedToMethodPerEndpoint: _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] =
+      new _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] {
+        override type MPE = MethodPerEndpoint
+        override val mpeClassTag: _root_.scala.reflect.ClassTag[MethodPerEndpoint] = _root_.scala.reflect.classTag[MethodPerEndpoint]
+        override def toMethodPerEndpoint(hk: SimpleService[_root_.com.twitter.util.Future]): MethodPerEndpoint = MethodPerEndpoint(hk)
+      }
+
   }
 
   trait MethodPerEndpoint extends SimpleService[Future]
 
   object MethodPerEndpoint {
+    def apply(fa: SimpleService[_root_.com.twitter.util.Future]): MethodPerEndpoint = new MethodPerEndpoint {
+      override def makeRequest(request: example.thrift.SimpleRequest): Future[example.thrift.SimpleResponse] = fa.makeRequest(request)
+    }
 
     def apply(servicePerEndpoint: ServicePerEndpoint): MethodPerEndpoint = {
       new MethodPerEndpointImpl(servicePerEndpoint) {}

@@ -49,27 +49,6 @@ object TemplateExtends {
 }
 
 object AddCatsTaglessInstances {
-  private def buildThriftServiceFromTrait(tree: Tree, alg: Defn.Trait): ThriftService = {
-    val name = alg.name.value
-
-    val companion =
-      tree
-        .collect {
-          case obj@Defn.Object(_, Term.Name(`name`), _) => obj
-        }
-        .headOption
-
-    ThriftService(alg, companion)
-  }
-
-  def addImplicitsToCompanionObjects(tree: Tree): List[Patch] =
-    tree
-      .collect {
-        case TraitWithTypeConstructor(name) => name
-      }
-      .map(buildThriftServiceFromTrait(tree, _))
-      .map(_.toPatch)
-
   def addServiceTrait(tree: Tree): List[Patch] =
     tree
       .collect {
@@ -86,12 +65,12 @@ object AddCatsTaglessInstances {
             case ThriftServiceTrait("MethodPerEndpoint", defn) =>
               ThriftServiceTrait(companionObjectTree, defn)
           }
-          .map(_.toPatch)
+          .flatMap(_.patches)
       }
 }
 
 case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Object,
-                              private val thriftServiceTrait: Defn.Trait) {
+                              private val methodPerEndpointTrait: Defn.Trait) {
   private object ExtendsServiceTrait {
     def unapply(subtree: Tree): Option[Template] =
       TemplateExtends(generatedThriftServiceObject.name.value)(subtree)
@@ -100,6 +79,7 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
   private def allInstances: List[ImplicitInstance] = List(
     ImplicitInstance.AlgebraInKleisli(generatedThriftServiceObject.name.value),
     ImplicitInstance.FunctorK(generatedThriftServiceObject.name.value),
+    ImplicitInstance.HigherKindedToMethodPerEndpoint(generatedThriftServiceObject.name.value),
   )
 
   private def code(instances: List[ImplicitInstance]): String =
@@ -125,14 +105,14 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
       .in(generatedThriftServiceObject)
 
   private val addServiceCompanionObjectWithImplicits: Patch =
-    Patch.addRight(thriftServiceTrait, companionObjectWithImplicits)
+    Patch.addRight(methodPerEndpointTrait, companionObjectWithImplicits)
       .onlyIfMissing {
         case Defn.Object(_, Term.Name(name), Template(_, List(), _, _)) if name == generatedThriftServiceObject.name.value => ()
       }
       .in(generatedThriftServiceObject)
-  
+
   private val addReplacementMethodPerEndpointTrait: Patch =
-    Patch.addRight(thriftServiceTrait,
+    Patch.addRight(methodPerEndpointTrait,
       s"""
          |  trait MethodPerEndpoint extends ${generatedThriftServiceObject.name.value}[Future]""".stripMargin)
       .onlyIfMissing {
@@ -140,31 +120,66 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
       }
       .in(generatedThriftServiceObject)
 
-  def toPatch: Patch =
-    Patch.fromIterable {
-      thriftServiceTrait
-        .collect {
-          // rename MethodPerEndpoint to {Name}Service[F[_]], add {Name}Service companion object with 
-          case t@Type.Name("MethodPerEndpoint") =>
-            Patch.fromIterable {
-              List(
-                renameMethodPerEndpoint(t),
-                addServiceCompanionObjectWithImplicits,
-                addReplacementMethodPerEndpointTrait,
-              )
-            }
+  private val modifyMethodPerEndpointTrait: List[Patch] =
+    methodPerEndpointTrait
+      .collect {
+        // rename MethodPerEndpoint to {Name}Service[F[_]], add {Name}Service companion object with
+        case t@Type.Name("MethodPerEndpoint") =>
+          Patch.fromIterable {
+            List(
+              renameMethodPerEndpoint(t),
+              addServiceCompanionObjectWithImplicits,
+              addReplacementMethodPerEndpointTrait,
+            )
+          }
 
-          // replace Future[*] with F[*]
-          case t@Type.Name("Future") =>
-            t.parent.fold(Patch.empty) {
-              Patch.replaceToken(t.tokens.head, "F")
-                .onlyIfMissing {
-                  case Type.Apply(Type.Name(name), _) if name == generatedThriftServiceObject.name.value => ()
+        // replace Future[*] with F[*]
+        case t@Type.Name("Future") =>
+          t.parent.fold(Patch.empty) {
+            Patch.replaceToken(t.tokens.head, "F")
+              .onlyIfMissing {
+                case Type.Apply(Type.Name(name), _) if name == generatedThriftServiceObject.name.value => ()
+              }
+              .in(_)
+          }
+      }
+
+  private val modifyMethodPerEndpointCompanionObject: List[Patch] =
+    generatedThriftServiceObject.collect {
+      // add new apply method for proxy implementation of MethodPerEndpoint
+      case t@Defn.Object(_, Term.Name("MethodPerEndpoint"), _) =>
+        t
+          .templ
+          .tokens
+          .find(_.text == "{")
+          .map {
+            def paramNames(ps: List[Term.Param]): String =
+              ps.map(_.name).mkString(", ")
+
+            def invokeEachParamList(paramss: List[List[Term.Param]]): String =
+              paramss.map(paramNames).mkString("(", "", ")")
+
+            val methods =
+              methodPerEndpointTrait
+                .templ
+                .collect {
+                  case d@Decl.Def(_, name, _, paramss, _) =>
+                    s"override ${d.toString()} = fa.$name${invokeEachParamList(paramss)}"
                 }
-                .in(_)
-            }
-        }
+
+            val code =
+              s"""
+                 |    def apply(fa: ${generatedThriftServiceObject.name.value}[_root_.com.twitter.util.Future]): MethodPerEndpoint = new MethodPerEndpoint {
+                 |      ${methods.mkString("", "\n      ", "")}
+                 |    }""".stripMargin
+
+            Patch.addRight(_, code)
+          }
+          .getOrElse(Patch.empty)
     }
+
+  def patches: List[Patch] =
+    modifyMethodPerEndpointTrait ++ modifyMethodPerEndpointCompanionObject
 }
 
 class GuardedPatch(private val tuple: (Patch, PartialFunction[Tree, _])) extends AnyVal {
@@ -207,50 +222,7 @@ object IdempotentPatch {
 
 class AddCatsTaglessInstances extends SemanticRule("AddCatsTaglessInstances") {
   override def fix(implicit doc: SemanticDocument): Patch =
-    Patch.fromIterable(addServiceTrait(doc.tree) ++ addImplicitsToCompanionObjects(doc.tree))
-}
-
-case class ThriftService(alg: Defn.Trait,
-                         companion: Option[Defn.Object]) {
-  private def allInstances: List[ImplicitInstance] = List(
-    ImplicitInstance.AlgebraInKleisli(alg.name.value),
-    ImplicitInstance.FunctorK(alg.name.value),
-  )
-
-  private def code(instances: List[ImplicitInstance]): String =
-    instances.map(_.code).mkString("", "\n", "\n")
-
-  def toPatch: Patch =
-    companion match {
-      case None =>
-        val companionString =
-          s"""|
-              |object ${alg.name} {
-              |${code(allInstances)}
-              |}""".stripMargin
-
-        Patch.addRight(alg, companionString)
-      case Some(companion) =>
-        val algName = alg.name.value
-
-        val existingInstances = companion.collect {
-          case ImplicitDefAlgInReaderT(`algName`) => ImplicitInstance.AlgebraInKleisli(algName)
-          case ImplicitValFunctorK(`algName`) => ImplicitInstance.FunctorK(algName)
-        }.toSet[ImplicitInstance]
-
-        val instancesToAdd = allInstances.filterNot(existingInstances)
-
-        if (instancesToAdd.isEmpty) Patch.empty
-        else
-          companion.tokens.last match {
-            case brace@Token.RightBrace() =>
-              Patch.addLeft(brace, code(instancesToAdd))
-            case other => Patch.addRight(other,
-              s""" {
-                 |${code(instancesToAdd)}
-                 |}""".stripMargin)
-          }
-    }
+    Patch.fromIterable(addServiceTrait(doc.tree))
 }
 
 sealed trait ImplicitInstance {
@@ -266,65 +238,19 @@ object ImplicitInstance {
 
   case class FunctorK(name: String) extends ImplicitInstance {
     def code: String =
-      s"    implicit val ${name}FunctorK: _root_.cats.tagless.FunctorK[$name] = _root_.cats.tagless.Derive.functorK[$name]"
+      s"""    implicit val ${name}FunctorK: _root_.cats.tagless.FunctorK[$name] = _root_.cats.tagless.Derive.functorK[$name]
+         |""".stripMargin
+  }
+  
+  case class HigherKindedToMethodPerEndpoint(name: String) extends ImplicitInstance {
+    def code: String =
+      s"""    implicit def ${name}HigherKindedToMethodPerEndpoint: _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[$name] =
+         |      new _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[$name] {
+         |        override type MPE = MethodPerEndpoint
+         |        override val mpeClassTag: _root_.scala.reflect.ClassTag[MethodPerEndpoint] = _root_.scala.reflect.classTag[MethodPerEndpoint]
+         |        override def toMethodPerEndpoint(hk: $name[_root_.com.twitter.util.Future]): MethodPerEndpoint = MethodPerEndpoint(hk)
+         |      }
+         |""".stripMargin
   }
 }
 
-object TraitWithTypeConstructor {
-  def unapply(subtree: Tree): Option[Defn.Trait] =
-    PartialFunction.condOpt(subtree) {
-      case term@Defn.Trait(_, _, TypeParamWithSingleHole(_), _, _) => term
-    }
-}
-
-object TypeParamWithSingleHole {
-  def unapply(list: List[Type.Param]): Option[String] =
-    PartialFunction.condOpt(list) {
-      case List(Type.Param(_, Type.Name(name), List(_: Type.Param), _, _, _)) => name
-    }
-}
-
-object SingleTypeParameter {
-  def unapply(tree: List[Type.Param]): Option[String] =
-    PartialFunction.condOpt(tree) {
-      case List(Type.Param(_, Type.Name(name), List(), _, _, _)) => name
-    }
-}
-
-object ImplicitValFunctorK {
-  def unapply(tree: Defn.Val): Option[String] =
-    PartialFunction.condOpt(tree) {
-      case Defn.Val(List(Mod.Implicit()), _, Some(FunctorK(name)), _) => name
-    }
-}
-
-object ImplicitDefAlgInReaderT {
-  def unapply(tree: Defn.Def): Option[String] =
-    PartialFunction.condOpt(tree) {
-      case Defn.Def(List(Mod.Implicit()), _, TypeParamWithSingleHole(passedEffect), _, Some(Type.Apply(Type.Name(algName), TypeProjectionOfReaderT(effect, alg))), _) if passedEffect == effect && algName == alg =>
-        algName
-    }
-}
-
-object TypeProjectionOfReaderT {
-  def unapply(tree: List[Type]): Option[(String, String)] =
-    PartialFunction.condOpt(tree) {
-      case List(Type.Project(Type.Refine(_, List(Defn.Type(_, _, SingleTypeParameter(projType), ReaderT(kleisliEffect, algName, outputType)))), _)) if projType == outputType =>
-        (kleisliEffect, algName)
-    }
-}
-
-object ReaderT {
-  def unapply(tree: Type.Apply): Option[(String, String, String)] =
-    PartialFunction.condOpt(tree) {
-      case Type.Apply(Type.Select(_, Type.Name("ReaderT")), List(Type.Name(kleisliEffect), Type.Apply(Type.Name(algName), List(Type.Name(algEffect))), Type.Name(outputType))) if kleisliEffect == algEffect =>
-        (kleisliEffect, algName, outputType)
-    }
-}
-
-object FunctorK {
-  def unapply(tree: Type.Apply): Option[String] =
-    PartialFunction.condOpt(tree) {
-      case Type.Apply(Type.Select(_, Type.Name("FunctorK")), List(Type.Name(name))) => name
-    }
-}
