@@ -7,7 +7,7 @@ queue_rules:
 pull_request_rules:
   - name: assign and label scala-steward's PRs
     conditions:
-      - author=scala-steward
+      - author=dwolla-oss-scala-steward[bot]
     actions:
       request_reviews:
         users: [bpholt]
@@ -15,7 +15,7 @@ pull_request_rules:
         add: [dependency-update]
   - name: merge scala-steward's PRs
     conditions:
-      - author=scala-steward
+      - author=dwolla-oss-scala-steward[bot]
       - "#commits-behind=0"
       - status-success=Build and Test (ubuntu-latest, temurin@8)
       - status-success=Build and Test (ubuntu-latest, temurin@11)
