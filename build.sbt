@@ -22,8 +22,8 @@ lazy val TwitterUtilsLatestV = "22.4.0"
 lazy val CatsTaglessV = "0.14.0"
 lazy val libthriftV = "0.10.0"
 
-lazy val SCALA_2_13 = "2.13.8"
-lazy val SCALA_2_12 = "2.12.16"
+lazy val SCALA_2_13 = "2.13.9"
+lazy val SCALA_2_12 = "2.12.17"
 
 lazy val Scala2Versions = Seq(SCALA_2_13, SCALA_2_12)
 
@@ -233,7 +233,7 @@ lazy val `scalafix-rules` = (projectMatrix in file("scalafix/rules"))
     libraryDependencies ++= Seq(
       "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
       "org.scalameta" %% "munit" % "0.7.29" % Test,
-      "com.eed3si9n.expecty" %% "expecty" % "0.15.4" % Test,
+      "com.eed3si9n.expecty" %% "expecty" % "0.16.0" % Test,
     ),
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
   )
