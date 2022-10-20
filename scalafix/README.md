@@ -13,7 +13,7 @@ the Scrooge version is updated by running the `regenerate-inputs.sh` script with
 the new Scrooge version as the first parameter.
 
 ```bash
-./regenerate-inputs.sh 21.8.0
+./regenerate-inputs.sh 22.7.0
 ```
 
 Then edit `scalafix/output/src/main/scala/example/thrift/SimpleService.scala` and replace the
