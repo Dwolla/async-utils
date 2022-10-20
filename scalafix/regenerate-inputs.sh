@@ -13,13 +13,13 @@ mkdir -p {input,output}/${GENERATED_SOURCES}
 cd input
 find "${GENERATED_SOURCES}" -name "*.scala" -delete
 mkdir -p project
-echo sbt.version=1.6.2 > project/build.properties
+echo sbt.version=1.7.2 > project/build.properties
 cat << __EOF__ > project/plugins.sbt
 addSbtPlugin("com.twitter" % "scrooge-sbt-plugin" % "${SCROOGE_VERSION}")
 __EOF__
 
 cat << __EOF__ > build.sbt
-scalaVersion := "2.13.8"
+scalaVersion := "2.13.10"
 libraryDependencies ++= {
   val finagleV = "${SCROOGE_VERSION}"
 
