@@ -16,7 +16,7 @@ import scala.util.{Failure, Success}
 object ThriftServer {
   def apply[F[_] : Async, Thrift[_[_]] : FunctorK : HigherKindedToMethodPerEndpoint](addr: String, iface: Thrift[F])
                                                                                     (implicit ec: ExecutionContext): Resource[F, ListeningServer] =
-    Dispatcher[F]
+    Dispatcher.parallel[F]
       .evalMap(unsafeMapKToFuture(_, iface).pure[F])
       .flatMap(t => Resource.make(acquire[F, Thrift](addr, t))(release[F]))
 
