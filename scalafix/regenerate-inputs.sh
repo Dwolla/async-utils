@@ -13,7 +13,7 @@ mkdir -p {input,output}/${GENERATED_SOURCES}
 cd input
 find "${GENERATED_SOURCES}" -name "*.scala" -delete
 mkdir -p project
-echo sbt.version=1.7.2 > project/build.properties
+echo sbt.version=1.8.0 > project/build.properties
 cat << __EOF__ > project/plugins.sbt
 addSbtPlugin("com.twitter" % "scrooge-sbt-plugin" % "${SCROOGE_VERSION}")
 __EOF__

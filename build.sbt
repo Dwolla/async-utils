@@ -1,20 +1,21 @@
-import ConfigAxes._
-
-inThisBuild(List(
-  organization := "com.dwolla",
-  description := "Safely convert final tagless-style algebras implemented in Future to cats-effect Async",
-  homepage := Some(url("https://github.com/Dwolla/")),
-  licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
-  developers := List(
-    Developer(
-      "bpholt",
-      "Brian Holt",
-      "bholt+async-utils@dwolla.com",
-      url("https://dwolla.com")
-    ),
+ThisBuild / organization := "com.dwolla"
+ThisBuild / homepage := Some(url("https://github.com/Dwolla/async-utils"))
+ThisBuild / licenses := Seq(License.MIT)
+ThisBuild / developers := List(
+  Developer(
+    "bpholt",
+    "Brian Holt",
+    "bholt+async-utils@dwolla.com",
+    url("https://dwolla.com")
   ),
-  startYear := Option(2021),
-))
+)
+ThisBuild / startYear := Option(2021)
+ThisBuild / tlSonatypeUseLegacyHost := true
+ThisBuild / tlBaseVersion := "0.1"
+ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
+ThisBuild / tlCiReleaseBranches := Seq("main")
+
+tpolecatScalacOptions += ScalacOptions.release("8")
 
 lazy val CatsEffect2V = "2.5.5"
 lazy val CatsEffect3V = "3.4.0"
@@ -26,6 +27,7 @@ lazy val SCALA_2_13 = "2.13.10"
 lazy val SCALA_2_12 = "2.12.17"
 
 lazy val Scala2Versions = Seq(SCALA_2_13, SCALA_2_12)
+ThisBuild / scalaVersion := SCALA_2_13
 
 lazy val scala2CompilerPlugins: Seq[ModuleID] = Seq(
   compilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
@@ -37,185 +39,62 @@ def dedupKindProjectorOptions(opts: Seq[String]): Seq[String] =
 lazy val moduleBase =
   Def.setting((Compile / scalaSource).value.getParentFile)
 
-lazy val `async-utils-core` = (projectMatrix in file("core"))
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce2",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect2V,
-          "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
+lazy val `async-utils-core` = crossProject(JVMPlatform, JSPlatform)
+  .in(file("core"))
+  .settings(
+    crossScalaVersions := Scala2Versions,
+    description := "Safely convert final tagless-style algebras implemented in Future to cats-effect Async",
+    libraryDependencies ++= {
+      Seq(
+        "org.typelevel" %% "cats-effect" % CatsEffect3V,
+        "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
+      ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+    },
   )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce3",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
-          "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-  )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, VirtualAxis.js),
-    _.settings(
-      moduleName := name.value + "-ce2",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %%% "cats-effect" % CatsEffect2V,
-          "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-      .enablePlugins(ScalaJSPlugin)
-  )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, VirtualAxis.js),
-    _.settings(
-      moduleName := name.value + "-ce3",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
-          "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-      .enablePlugins(ScalaJSPlugin)
-  )
+  .jsEnablePlugins(ScalaJSPlugin)
 
-lazy val `async-utils` = (projectMatrix in file("scala-futures"))
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce2",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect2V,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
+lazy val `async-utils` = crossProject(JVMPlatform, JSPlatform)
+  .in(file("scala-futures"))
+  .settings(
+    crossScalaVersions := Scala2Versions,
+    libraryDependencies ++= {
+      Seq(
+        "org.typelevel" %% "cats-effect" % CatsEffect3V,
+      ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+    },
   )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce3",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-  )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, VirtualAxis.js),
-    _.settings(
-      moduleName := name.value + "-ce2",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %%% "cats-effect" % CatsEffect2V,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-      .enablePlugins(ScalaJSPlugin)
-  )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, VirtualAxis.js),
-    _.settings(
-      moduleName := name.value + "-ce3",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      },
-    )
-      .enablePlugins(ScalaJSPlugin)
-  )
+  .jsEnablePlugins(ScalaJSPlugin)
   .dependsOn(`async-utils-core`)
 
-lazy val `async-utils-twitter` = (projectMatrix in file("twitter-futures"))
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce2",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect2V,
-          "com.twitter" %% "util-core" % TwitterUtilsLatestV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      }
-    )
+lazy val `async-utils-twitter` = project
+  .in(file("twitter-futures"))
+  .settings(
+    crossScalaVersions := Scala2Versions,
+    libraryDependencies ++= {
+      Seq(
+        "org.typelevel" %% "cats-effect" % CatsEffect3V,
+        "com.twitter" %% "util-core" % TwitterUtilsLatestV,
+      ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+    }
   )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce3",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
-          "com.twitter" %% "util-core" % TwitterUtilsLatestV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      }
-    )
-  )
-  .dependsOn(`async-utils-core`)
+  .dependsOn(`async-utils-core`.jvm)
 
-lazy val `async-utils-finagle` = (projectMatrix in file("twitter-finagle"))
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect2, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce2",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce2",
-      libraryDependencies ++= {
-        Seq(
-          "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      }
-    )
-  )
-  .customRow(
-    scalaVersions = Scala2Versions,
-    axisValues = Seq(CatsEffect3, VirtualAxis.jvm),
-    _.settings(
-      moduleName := name.value + "-ce3",
-      Compile / unmanagedSourceDirectories += moduleBase.value / "scala-ce3",
-      libraryDependencies ++= {
-        Seq(
-          "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
-        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
-      }
-    )
+lazy val `async-utils-finagle` = project
+  .in(file("twitter-finagle"))
+  .settings(
+    crossScalaVersions := Scala2Versions,
+    libraryDependencies ++= {
+      Seq(
+        "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
+      ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+    }
   )
   .dependsOn(`async-utils-twitter`)
 
-lazy val examples = (projectMatrix in file("examples"))
+lazy val examples = crossProject(JVMPlatform)
+  .in(file("examples"))
   .settings(
+    crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
         "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
@@ -223,12 +102,12 @@ lazy val examples = (projectMatrix in file("examples"))
     },
     publish / skip := true,
   )
-  .jvmPlatform(scalaVersions = Scala2Versions)
   .dependsOn(`async-utils`)
 
-lazy val `scalafix-rules` = (projectMatrix in file("scalafix/rules"))
-  .jvmPlatform(scalaVersions = Scala2Versions)
+lazy val `scalafix-rules` = project
+  .in(file("scalafix/rules"))
   .settings(
+    crossScalaVersions := Scala2Versions,
     moduleName := "finagle-tagless-scalafix",
     libraryDependencies ++= Seq(
       "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
@@ -238,10 +117,11 @@ lazy val `scalafix-rules` = (projectMatrix in file("scalafix/rules"))
     scalacOptions ~= { _.filterNot(_ == "-Xfatal-warnings") },
   )
 
-lazy val `scalafix-input` = (project in file("scalafix/input"))
+lazy val `scalafix-input` = project
+  .in(file("scalafix/input"))
   .settings(
     publish / skip := true,
-    scalaVersion := Scala2Versions.head,
+    crossScalaVersions := Scala2Versions,
     libraryDependencies ++= Seq(
       "com.twitter" %% "scrooge-core" % TwitterUtilsLatestV,
       "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
@@ -256,10 +136,11 @@ lazy val `scalafix-input` = (project in file("scalafix/input"))
   .dependsOn(`scalafix-input-dependency`)
   .disablePlugins(ScalafixPlugin)
 
-lazy val `scalafix-output` = (project in file("scalafix/output"))
+lazy val `scalafix-output` = project
+  .in(file("scalafix/output"))
   .settings(
     publish / skip := true,
-    scalaVersion := Scala2Versions.head,
+    crossScalaVersions := Scala2Versions,
     libraryDependencies ++= Seq(
       "com.twitter" %% "scrooge-core" % TwitterUtilsLatestV,
       "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
@@ -274,9 +155,10 @@ lazy val `scalafix-output` = (project in file("scalafix/output"))
   .dependsOn(`scalafix-output-dependency`)
   .disablePlugins(ScalafixPlugin)
 
-lazy val `scalafix-tests` = (projectMatrix in file("scalafix/tests"))
-  .jvmPlatform(scalaVersions = Scala2Versions)
+lazy val `scalafix-tests` = project
+  .in(file("scalafix/tests"))
   .settings(
+    crossScalaVersions := Scala2Versions,
     publish / skip := true,
     libraryDependencies += "ch.epfl.scala" % "scalafix-testkit" % _root_.scalafix.sbt.BuildInfo.scalafixVersion % Test cross CrossVersion.full,
     scalafixTestkitOutputSourceDirectories := (`scalafix-output` / Compile / unmanagedSourceDirectories).value,
@@ -288,10 +170,11 @@ lazy val `scalafix-tests` = (projectMatrix in file("scalafix/tests"))
   .dependsOn(`scalafix-rules`)
   .enablePlugins(ScalafixTestkitPlugin)
 
-lazy val `scalafix-input-dependency` = (project in file("scalafix/input-dependency"))
+lazy val `scalafix-input-dependency` = project
+  .in(file("scalafix/input-dependency"))
   .settings(
     publish / skip := true,
-    scalaVersion := Scala2Versions.head,
+    crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
         "com.twitter" %% "finagle-thrift" % TwitterUtilsLatestV,
@@ -301,10 +184,11 @@ lazy val `scalafix-input-dependency` = (project in file("scalafix/input-dependen
     },
   )
 
-lazy val `scalafix-output-dependency` = (project in file("scalafix/output-dependency"))
+lazy val `scalafix-output-dependency` = project
+  .in(file("scalafix/output-dependency"))
   .settings(
     publish / skip := true,
-    scalaVersion := Scala2Versions.head,
+    crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
         "com.twitter" %% "util-core" % TwitterUtilsLatestV,
@@ -313,19 +197,19 @@ lazy val `scalafix-output-dependency` = (project in file("scalafix/output-depend
       )
     },
   )
-  .dependsOn(`async-utils-finagle`.finder(CatsEffect3, VirtualAxis.jvm).apply(Scala2Versions.head))
+  .dependsOn(`async-utils-finagle`)
 
 lazy val `async-utils-root` = (project in file("."))
   .aggregate(
-    Seq(
-      `async-utils-core`,
-      `async-utils`,
-      `async-utils-twitter`,
-      `async-utils-finagle`,
-      `scalafix-rules`,
-      `scalafix-tests`,
-      examples,
-    ).flatMap(_.projectRefs): _*
+    `async-utils-core`.jvm,
+    `async-utils-core`.js,
+    `async-utils`.jvm,
+    `async-utils`.js,
+    `async-utils-twitter`,
+    `async-utils-finagle`,
+    `scalafix-rules`,
+    `scalafix-tests`,
+    examples.jvm,
   )
   .settings(
     publish / skip := true,

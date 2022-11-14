@@ -1,5 +1,6 @@
 addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.4.1")
-addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.5.11")
-addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.9.0")
+addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.2.0")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-ci-release" % "0.4.17")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-mergify" % "0.4.17")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.11.0")
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.10.4")
