@@ -11,7 +11,7 @@ ThisBuild / developers := List(
 )
 ThisBuild / startYear := Option(2021)
 ThisBuild / tlSonatypeUseLegacyHost := true
-ThisBuild / tlBaseVersion := "0.1"
+ThisBuild / tlBaseVersion := "1.0"
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main")
 
@@ -32,12 +32,6 @@ ThisBuild / scalaVersion := SCALA_2_13
 lazy val scala2CompilerPlugins: Seq[ModuleID] = Seq(
   compilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
 )
-
-def dedupKindProjectorOptions(opts: Seq[String]): Seq[String] =
-  if (opts.count(_.contains("-Ykind-projector")) > 1) opts.filterNot(_ == "-Ykind-projector") else opts
-
-lazy val moduleBase =
-  Def.setting((Compile / scalaSource).value.getParentFile)
 
 lazy val `async-utils-core` = crossProject(JVMPlatform, JSPlatform)
   .in(file("core"))
