@@ -65,6 +65,19 @@ lazy val `async-utils-finagle` = project
   )
   .dependsOn(`async-utils-twitter`)
 
+lazy val `async-utils-finagle-natchez` = project
+  .in(file("finagle-natchez"))
+  .settings(
+    crossScalaVersions := Scala2Versions,
+    libraryDependencies ++= {
+      Seq(
+        "org.tpolecat" %% "natchez-core" % "0.1.6",
+        "com.comcast" %% "ip4s-core" % "3.2.0",
+      ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+    }
+  )
+  .dependsOn(`async-utils-finagle`)
+
 lazy val `scalafix-rules` = project
   .in(file("scalafix/rules"))
   .settings(
@@ -164,6 +177,7 @@ lazy val `async-utils-root` = (project in file("."))
   .aggregate(
     `async-utils-twitter`,
     `async-utils-finagle`,
+    `async-utils-finagle-natchez`,
     `scalafix-rules`,
     `scalafix-tests`,
   )

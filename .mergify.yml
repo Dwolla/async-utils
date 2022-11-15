@@ -14,6 +14,14 @@ pull_request_rules:
   - status-success=Build and Test (ubuntu-latest, 2.12, temurin@8)
   actions:
     merge: {}
+- name: Label finagle-natchez PRs
+  conditions:
+  - files~=^finagle-natchez/
+  actions:
+    label:
+      add:
+      - finagle-natchez
+      remove: []
 - name: Label input PRs
   conditions:
   - files~=^scalafix/input/
