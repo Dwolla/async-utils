@@ -14,22 +14,6 @@ pull_request_rules:
   - status-success=Build and Test (ubuntu-latest, 2.12, temurin@8)
   actions:
     merge: {}
-- name: Label core PRs
-  conditions:
-  - files~=^core/
-  actions:
-    label:
-      add:
-      - core
-      remove: []
-- name: Label examples PRs
-  conditions:
-  - files~=^examples/
-  actions:
-    label:
-      add:
-      - examples
-      remove: []
 - name: Label input PRs
   conditions:
   - files~=^scalafix/input/
@@ -69,14 +53,6 @@ pull_request_rules:
     label:
       add:
       - rules
-      remove: []
-- name: Label scala-futures PRs
-  conditions:
-  - files~=^scala-futures/
-  actions:
-    label:
-      add:
-      - scala-futures
       remove: []
 - name: Label tests PRs
   conditions:
