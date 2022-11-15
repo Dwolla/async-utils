@@ -14,7 +14,15 @@ object ThriftClient {
   def apply[Alg[_[_]] <: AnyRef {def asClosable: Closable}] = new PartiallyAppliedThriftClient[Alg]()
 
   class PartiallyAppliedThriftClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}] private[ThriftClient] (val dummy: Unit = ()) extends AnyVal {
-    def apply[G[_] : Async](dest: String, config: ThriftClientConfiguration = ThriftClientConfiguration())
+    def apply[G[_] : Async](dest: String)
+                           (implicit
+                            AlgR: Alg[ReaderT[Future, Alg[Future], *]],
+                            FK: FunctorK[Alg],
+                            MPE: HigherKindedToMethodPerEndpoint[Alg],
+                           ): Resource[G, Alg[G]] =
+      apply(dest, ThriftClientConfiguration())
+
+    def apply[G[_] : Async](dest: String, config: ThriftClientConfiguration)
                            (implicit
                             AlgR: Alg[ReaderT[Future, Alg[Future], *]],
                             FK: FunctorK[Alg],
@@ -29,6 +37,7 @@ object ThriftClient {
             .withSession.acquisitionTimeout(config.sessionAcquisitionTimeout)
             .withTransport.connectTimeout(config.transportConnectTimeout)
             .withRetryBudget(config.retryBudget)
+            .withTracer(config.tracer)
             .build(dest)(HigherKindedToMethodPerEndpoint[Alg].mpeClassTag)
         }
           .map(_.asyncMapK[G])
