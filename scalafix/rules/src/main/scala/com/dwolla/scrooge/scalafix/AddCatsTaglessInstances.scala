@@ -78,7 +78,7 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
 
   private def allInstances: List[ImplicitInstance] = List(
     ImplicitInstance.AlgebraInKleisli(generatedThriftServiceObject.name.value),
-    ImplicitInstance.FunctorK(generatedThriftServiceObject.name.value),
+    ImplicitInstance.Instrument(generatedThriftServiceObject.name.value),
     ImplicitInstance.HigherKindedToMethodPerEndpoint(generatedThriftServiceObject.name.value),
   )
 
@@ -236,9 +236,10 @@ object ImplicitInstance {
          |""".stripMargin
   }
 
-  case class FunctorK(name: String) extends ImplicitInstance {
+  case class Instrument(name: String) extends ImplicitInstance {
+    // TODO make this Aspect[SimpleService, ToTraceValue, ToTraceValue]
     def code: String =
-      s"""    implicit val ${name}FunctorK: _root_.cats.tagless.FunctorK[$name] = _root_.cats.tagless.Derive.functorK[$name]
+      s"""    implicit val ${name}Instrument: _root_.cats.tagless.aop.Instrument[$name] = _root_.cats.tagless.Derive.instrument[$name]
          |""".stripMargin
   }
   
@@ -253,4 +254,3 @@ object ImplicitInstance {
          |""".stripMargin
   }
 }
-
