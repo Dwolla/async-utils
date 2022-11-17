@@ -28,22 +28,25 @@ object ThriftClient {
                             FK: FunctorK[Alg],
                             MPE: HigherKindedToMethodPerEndpoint[Alg],
                            ): Resource[G, Alg[G]] = {
-      val acquire =
-        Sync[G].delay {
-          Thrift
-            .client
-            .withSessionPool.maxSize(config.sessionPoolMax)
-            .withRequestTimeout(config.requestTimeout)
-            .withSession.acquisitionTimeout(config.sessionAcquisitionTimeout)
-            .withTransport.connectTimeout(config.transportConnectTimeout)
-            .withRetryBudget(config.retryBudget)
-            .withTracer(config.tracer)
-            .build(dest)(HigherKindedToMethodPerEndpoint[Alg].mpeClassTag)
-        }
-          .map(_.asyncMapK[G])
+      val acquire = initialAcquire(dest, config).map(_.asyncMapK[G])
       val release: Alg[G] => G[Unit] = alg => liftFuture(Sync[G].delay(alg.asClosable.close()))
 
       Resource.make(acquire)(release)
     }
   }
+
+  private[finagle] def initialAcquire[Alg[_[_]], F[_] : Sync](dest: String,
+                                                              config: ThriftClientConfiguration)
+                                                             (implicit MPE: HigherKindedToMethodPerEndpoint[Alg]): F[MPE.MPE] =
+    Sync[F].delay {
+      Thrift
+        .client
+        .withSessionPool.maxSize(config.sessionPoolMax)
+        .withRequestTimeout(config.requestTimeout)
+        .withSession.acquisitionTimeout(config.sessionAcquisitionTimeout)
+        .withTransport.connectTimeout(config.transportConnectTimeout)
+        .withRetryBudget(config.retryBudget)
+        .withTracer(config.tracer)
+        .build[MPE.MPE](dest)(MPE.mpeClassTag)
+    }
 }
