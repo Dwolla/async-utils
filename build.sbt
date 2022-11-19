@@ -15,6 +15,10 @@ ThisBuild / tlBaseVersion := "1.0"
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main")
 ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
+ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
+  author = "dwolla-oss-scala-steward[bot]",
+  mergeMinors = true,
+))}
 
 tpolecatScalacOptions += ScalacOptions.release("8")
 
