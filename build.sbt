@@ -19,7 +19,7 @@ ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 tpolecatScalacOptions += ScalacOptions.release("8")
 
 lazy val CatsEffect2V = "2.5.5"
-lazy val CatsEffect3V = "3.4.0"
+lazy val CatsEffect3V = "3.4.1"
 lazy val TwitterUtilsLatestV = "22.7.0"
 lazy val CatsTaglessV = "0.14.0"
 lazy val libthriftV = "0.10.0"
