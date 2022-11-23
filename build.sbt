@@ -14,7 +14,6 @@ ThisBuild / tlSonatypeUseLegacyHost := true
 ThisBuild / tlBaseVersion := "1.0"
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main")
-ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
   author = "dwolla-oss-scala-steward[bot]",
   mergeMinors = true,
@@ -22,7 +21,6 @@ ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
 
 tpolecatScalacOptions += ScalacOptions.release("8")
 
-lazy val CatsEffect2V = "2.5.5"
 lazy val CatsEffect3V = "3.4.1"
 lazy val TwitterUtilsLatestV = "22.7.0"
 lazy val CatsTaglessV = "0.14.0"
@@ -50,7 +48,7 @@ lazy val `async-utils-twitter` = project
     crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
-        "com.dwolla" %% "async-utils-core" % "1.0-d303f6e-SNAPSHOT",
+        "com.dwolla" %% "async-utils-core" % "1.0.0",
         "org.typelevel" %% "cats-effect" % CatsEffect3V,
         "com.twitter" %% "util-core" % TwitterUtilsLatestV,
       ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
