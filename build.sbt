@@ -74,6 +74,7 @@ lazy val examples = crossProject(JVMPlatform)
       ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
     },
     publish / skip := true,
+    publishArtifact := false,
   )
   .dependsOn(`async-utils`)
 
@@ -87,4 +88,5 @@ lazy val `async-utils-root` = (project in file("."))
   )
   .settings(
     publish / skip := true,
+    publishArtifact := false,
   )
