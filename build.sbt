@@ -97,6 +97,7 @@ lazy val `scalafix-input` = project
   .in(file("scalafix/input"))
   .settings(
     publish / skip := true,
+    publishArtifact := false,
     crossScalaVersions := Scala2Versions,
     libraryDependencies ++= Seq(
       "com.twitter" %% "scrooge-core" % TwitterUtilsLatestV,
@@ -116,6 +117,7 @@ lazy val `scalafix-output` = project
   .in(file("scalafix/output"))
   .settings(
     publish / skip := true,
+    publishArtifact := false,
     crossScalaVersions := Scala2Versions,
     libraryDependencies ++= Seq(
       "com.twitter" %% "scrooge-core" % TwitterUtilsLatestV,
@@ -136,6 +138,7 @@ lazy val `scalafix-tests` = project
   .settings(
     crossScalaVersions := Scala2Versions,
     publish / skip := true,
+    publishArtifact := false,
     libraryDependencies += "ch.epfl.scala" % "scalafix-testkit" % _root_.scalafix.sbt.BuildInfo.scalafixVersion % Test cross CrossVersion.full,
     scalafixTestkitOutputSourceDirectories := (`scalafix-output` / Compile / unmanagedSourceDirectories).value,
     scalafixTestkitInputSourceDirectories := (`scalafix-input` / Compile / unmanagedSourceDirectories).value,
@@ -150,6 +153,7 @@ lazy val `scalafix-input-dependency` = project
   .in(file("scalafix/input-dependency"))
   .settings(
     publish / skip := true,
+    publishArtifact := false,
     crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
@@ -164,6 +168,7 @@ lazy val `scalafix-output-dependency` = project
   .in(file("scalafix/output-dependency"))
   .settings(
     publish / skip := true,
+    publishArtifact := false,
     crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
@@ -185,4 +190,5 @@ lazy val `async-utils-root` = (project in file("."))
   )
   .settings(
     publish / skip := true,
+    publishArtifact := false,
   )
