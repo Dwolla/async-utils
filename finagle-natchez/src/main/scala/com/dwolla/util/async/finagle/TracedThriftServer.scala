@@ -4,7 +4,6 @@ import cats._
 import cats.data.Kleisli
 import cats.effect._
 import cats.effect.std.Dispatcher
-import cats.syntax.all._
 import cats.tagless._
 import cats.tagless.aop._
 import cats.tagless.implicits._
@@ -57,7 +56,7 @@ object TracedThriftServer {
             entryPoint.continueOrElseRoot(
               s"${fa.algebraName}.${fa.methodName}",
               maybeTraceId
-                .map(toZipkinKernel)
+                .map(ZipkinKernel.asKernel)
                 .getOrElse(Kernel(Map.empty))
             )
               .use(fa.value.run)
@@ -73,19 +72,6 @@ object TracedThriftServer {
 
   private def currentTraceId(): Future[Option[TraceId]] =
     Future(com.twitter.finagle.tracing.Trace.idOption)
-
-  // TODO this propagates the headers in the B3 format, but maybe it should convert to OpenTelemetry / W3C's tracecontext header
-  private def toZipkinKernel(t: TraceId): Kernel = Kernel {
-    val headers: List[(String, String)] =
-      List(
-        "X-B3-TraceId" -> t.traceId.toString(),
-        "X-B3-SpanId" -> t.spanId.toString(),
-      ) ++
-        t._parentId.map(_.toString).map("X-B3-ParentSpanId" -> _).toList ++
-        t.sampled.ifM(Option("X-B3-Sampled" -> "1"), None).toList
-
-    headers.toMap
-  }
 
   private def acquire[F[_] : Sync, Thrift[_[_]] : HigherKindedToMethodPerEndpoint](addr: SocketAddress[IpAddress],
                                                                                    label: String,

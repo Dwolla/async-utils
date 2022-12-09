@@ -10,9 +10,7 @@ import com.dwolla.util.async.finagle.TracedTwitterFutureAsyncFunctorK.ProvideFut
 import com.dwolla.util.async.twitter._
 import com.dwolla.util.async.~~>
 import com.twitter.finagle
-import com.twitter.finagle.tracing.{SpanId, TraceId}
 import com.twitter.util.Future
-import natchez.Kernel
 
 object TracedTwitterFutureAsyncFunctorK {
   def apply[F[_] : natchez.Trace]: TracedTwitterFutureAsyncFunctorK[F] =
@@ -20,7 +18,7 @@ object TracedTwitterFutureAsyncFunctorK {
 
   class ProvideFutureAlgWithTracing[F[_] : Async : natchez.Trace, Alg[_[_]]](alg: Alg[Future]) extends (Kleisli[Future, Alg[Future], *] ~> F) {
     override def apply[A](fa: Kleisli[Future, Alg[Future], A]): F[A] =
-      OptionT(natchez.Trace[F].kernel.map(zipkinKernelToTraceId))
+      OptionT(natchez.Trace[F].kernel.map(ZipkinKernel.asTraceId))
         .semiflatMap { traceId =>
           liftFuture[F] {
             Sync[F].delay {
@@ -40,22 +38,6 @@ object TracedTwitterFutureAsyncFunctorK {
             }
           }
         }
-
-    private def zipkinKernelToTraceId(kernel: Kernel): Option[TraceId] = {
-      val headers = kernel.toHeaders
-
-      headers.get("X-B3-SpanId")
-        .flatMap(SpanId.fromString)
-        .map { spanId =>
-          val traceId = headers.get("X-B3-TraceId").flatMap(SpanId.fromString)
-          val parentId = headers.get("X-B3-ParentSpanId").flatMap(SpanId.fromString)
-          val sampled = headers.get("X-B3-Sampled").collect {
-            case "1" => true
-          }
-
-          TraceId(traceId, parentId, spanId, sampled)
-        }
-    }
   }
 }
 
