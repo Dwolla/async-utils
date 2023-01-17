@@ -73,7 +73,7 @@ lazy val `async-utils-finagle-natchez` = project
     crossScalaVersions := Scala2Versions,
     libraryDependencies ++= {
       Seq(
-        "org.tpolecat" %% "natchez-core" % "0.2.2",
+        "org.tpolecat" %% "natchez-core" % "0.3.0",
         "com.comcast" %% "ip4s-core" % "3.2.0",
       ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
     }
