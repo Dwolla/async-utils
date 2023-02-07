@@ -75,6 +75,7 @@ lazy val `async-utils-finagle-natchez` = project
       Seq(
         "org.tpolecat" %% "natchez-core" % "0.3.0",
         "com.comcast" %% "ip4s-core" % "3.2.0",
+        "org.typelevel" %% "cats-mtl" % "1.3.0",
       ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
     }
   )
