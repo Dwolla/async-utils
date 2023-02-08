@@ -11,7 +11,7 @@ ThisBuild / developers := List(
 )
 ThisBuild / startYear := Option(2021)
 ThisBuild / tlSonatypeUseLegacyHost := true
-ThisBuild / tlBaseVersion := "0.2"
+ThisBuild / tlBaseVersion := "0.3"
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main")
 ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
@@ -76,6 +76,7 @@ lazy val `async-utils-finagle-natchez` = project
         "org.tpolecat" %% "natchez-core" % "0.3.0",
         "com.comcast" %% "ip4s-core" % "3.2.0",
         "org.typelevel" %% "cats-mtl" % "1.3.0",
+        "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
       ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
     }
   )

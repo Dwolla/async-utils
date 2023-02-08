@@ -1,13 +1,18 @@
 package com.dwolla.util.async.finagle
 
+import cats.Functor
 import cats.data._
+import cats.effect.std.Env
+import cats.effect.syntax.all._
 import cats.effect.{Trace => _, tracing => _, _}
 import cats.syntax.all._
 import cats.tagless._
 import com.dwolla.util.async.finagle.ThriftClient.initialAcquire
 import com.dwolla.util.async.twitter._
+import com.twitter.finagle.stats.NullStatsReceiver
 import com.twitter.util.{Closable, Future}
 import natchez.Trace
+import zipkin2.finagle.http.HttpZipkinTracer
 
 import scala.language.reflectiveCalls
 
@@ -40,6 +45,7 @@ object TracedThriftClient {
 
   class PartiallyAppliedThriftClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}] private[TracedThriftClient](val dummy: Unit = ()) extends AnyVal {
     /**
+     * @param name the local service name to be set on the Zipkin tracer
      * @param dest the destination whence the Thrift interface is being served.
      *             supports Finagle's `Resolver` interface (because the destination
      *             is handed directly to the Finagle layer)
@@ -47,18 +53,21 @@ object TracedThriftClient {
      * @tparam G the effect type in which the client should operate. Requires both an `Async` and `Trace` constraint.
      * @return a Finagle Thrift client that will operate in
      */
-    def apply[F[_] : Async, G[_] : Async : Trace](dest: String)
-                                                 (implicit
-                                                  AlgR: Alg[Kleisli[Future, Alg[Future], *]],
-                                                  FK: FunctorK[Alg],
-                                                  MPE: HigherKindedToMethodPerEndpoint[Alg],
-                                                 ): Resource[F, Alg[G]] =
-      apply[F, G](dest, ThriftClientConfiguration())
+    def apply[F[_] : Async : Env, G[_] : Async : Trace](name: String,
+                                                        dest: String)
+                                                       (implicit
+                                                        AlgR: Alg[Kleisli[Future, Alg[Future], *]],
+                                                        FK: FunctorK[Alg],
+                                                        MPE: HigherKindedToMethodPerEndpoint[Alg],
+                                                       ): Resource[F, Alg[G]] =
+      zipkinConfig[F](name)
+        .toResource
+        .flatMap(apply[F, G](dest, _))
 
     /**
-     * @param dest the destination whence the Thrift interface is being served.
-     *             supports Finagle's `Resolver` interface (because the destination
-     *             is handed directly to the Finagle layer)
+     * @param dest   the destination whence the Thrift interface is being served.
+     *               supports Finagle's `Resolver` interface (because the destination
+     *               is handed directly to the Finagle layer)
      * @param config an instance of `ThriftClientConfiguration` containing configuration settings
      * @tparam F the effect type in which to construct the Resource that will manage the client. Requires an `Async` instance, but not a `Trace`
      * @tparam G the effect type in which the client should operate. Requires both an `Async` and `Trace` constraint.
@@ -77,4 +86,22 @@ object TracedThriftClient {
       Resource.make(acquire)(release)
     }
   }
+
+  private def zipkinConfig[F[_] : Functor : Env](service: String): F[ThriftClientConfiguration] =
+    Env[F]
+      .get("OTEL_EXPORTER_ZIPKIN_ENDPOINT")
+      .map {
+        _.map {
+          HttpZipkinTracer.Config
+            .builder()
+            .host(_)
+            .initialSampleRate(1.0f)
+            .tlsEnabled(false)
+            .localServiceName(service)
+            .compressionEnabled(true)
+            .build()
+        }
+          .map(HttpZipkinTracer.create(_, new NullStatsReceiver()))
+          .foldl(ThriftClientConfiguration())(_ withTracer _)
+      }
 }
