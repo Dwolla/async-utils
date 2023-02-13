@@ -16,6 +16,7 @@ import com.twitter.finagle._
 import com.twitter.finagle.tracing.TraceId
 import com.twitter.util.{Future, Promise}
 import natchez._
+import natchez.mtl._
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -119,27 +120,4 @@ object TracedThriftServer {
 
   private def release[F[_] : Async](s: ListeningServer): F[Unit] =
     liftFuture(Sync[F].delay(s.close()))
-
-  /**
-   * `Local[Kleisli[F, Span[F], *], Span[Kleisli[F, Span[F], *]]]`
-   *
-   * TODO remove when https://github.com/tpolecat/natchez/pull/713 is merged and released
-   *
-   * @param F a `MonadCancel[F, _]` instance for the effect type `F`
-   * @tparam F the effect type in which to operate
-   * @return `Local[Kleisli[F, Span[F], *], Span[Kleisli[F, Span[F], *]]]`
-   */
-  private implicit def localSpanViaKleisli[F[_]](implicit F: MonadCancel[F, _]): Local[Kleisli[F, Span[F], *], Span[Kleisli[F, Span[F], *]]] =
-    new Local[Kleisli[F, Span[F], *], Span[Kleisli[F, Span[F], *]]] {
-      override def local[A](fa: Kleisli[F, Span[F], A])(f: Span[Kleisli[F, Span[F], *]] => Span[Kleisli[F, Span[F], *]]): Kleisli[F, Span[F], A] =
-        fa.local {
-          f.andThen(_.mapK(Kleisli.applyK(Span.noop[F])))
-            .compose(_.mapK(MonadPartialOrder[F, Kleisli[F, Span[F], *]]))
-        }
-
-      override def applicative: Applicative[Kleisli[F, Span[F], *]] = Kleisli.catsDataApplicativeForKleisli
-
-      override def ask[E2 >: Span[Kleisli[F, Span[F], *]]]: Kleisli[F, Span[F], E2] =
-        Kleisli.ask[F, Span[F]].map(_.mapK(MonadPartialOrder[F, Kleisli[F, Span[F], *]]))
-    }
 }
