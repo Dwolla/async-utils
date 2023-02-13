@@ -1,6 +1,5 @@
 package com.dwolla.util.async.finagle
 
-import cats.Functor
 import cats.data._
 import cats.effect.std.Env
 import cats.effect.syntax.all._
@@ -9,10 +8,8 @@ import cats.syntax.all._
 import cats.tagless._
 import com.dwolla.util.async.finagle.ThriftClient.initialAcquire
 import com.dwolla.util.async.twitter._
-import com.twitter.finagle.stats.NullStatsReceiver
 import com.twitter.util.{Closable, Future}
 import natchez.Trace
-import zipkin2.finagle.http.HttpZipkinTracer
 
 import scala.language.reflectiveCalls
 
@@ -60,7 +57,8 @@ object TracedThriftClient {
                                                         FK: FunctorK[Alg],
                                                         MPE: HigherKindedToMethodPerEndpoint[Alg],
                                                        ): Resource[F, Alg[G]] =
-      zipkinConfig[F](name)
+      ZipkinTracer[F](name)
+        .map(ThriftClientConfiguration().withTracer(_))
         .toResource
         .flatMap(apply[F, G](dest, _))
 
@@ -86,22 +84,4 @@ object TracedThriftClient {
       Resource.make(acquire)(release)
     }
   }
-
-  private def zipkinConfig[F[_] : Functor : Env](service: String): F[ThriftClientConfiguration] =
-    Env[F]
-      .get("OTEL_EXPORTER_ZIPKIN_ENDPOINT")
-      .map {
-        _.map {
-          HttpZipkinTracer.Config
-            .builder()
-            .host(_)
-            .initialSampleRate(1.0f)
-            .tlsEnabled(false)
-            .localServiceName(service)
-            .compressionEnabled(true)
-            .build()
-        }
-          .map(HttpZipkinTracer.create(_, new NullStatsReceiver()))
-          .foldl(ThriftClientConfiguration())(_ withTracer _)
-      }
 }
