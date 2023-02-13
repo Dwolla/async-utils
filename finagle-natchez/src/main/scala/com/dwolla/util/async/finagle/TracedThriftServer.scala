@@ -1,7 +1,6 @@
 package com.dwolla.util.async.finagle
 
 import cats._
-import cats.data.Kleisli
 import cats.effect._
 import cats.effect.std.{Dispatcher, Env}
 import cats.mtl._
@@ -16,7 +15,6 @@ import com.twitter.finagle._
 import com.twitter.finagle.tracing.TraceId
 import com.twitter.util.{Future, Promise}
 import natchez._
-import natchez.mtl._
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -46,28 +44,6 @@ object TracedThriftServer {
                                                                                             )
                                                                                             (implicit ec: ExecutionContext,
                                                                                              LocalSpan: Local[F, Span[F]]): Resource[F, ListeningServer] =
-    impl(addr, label, iface, entryPoint)
-
-  @deprecated("use the Local[F, Span[F]] variant", "v0.2.1")
-  def apply[F[_] : Async, Thrift[_[_]] : HigherKindedToMethodPerEndpoint : Instrument](addr: SocketAddress[IpAddress],
-                                                                                       label: String,
-                                                                                       iface: Thrift[Kleisli[F, Span[F], *]],
-                                                                                       entryPoint: EntryPoint[F]
-                                                                                      )
-                                                                                      (implicit ec: ExecutionContext): Resource[F, ListeningServer] = {
-    implicit val e: Env[F] = Env.make[F]
-
-    impl[Kleisli[F, Span[F], *], Thrift](addr, label, iface, entryPoint.mapK(Kleisli.liftK)).mapK(Kleisli.applyK(Span.noop[F]))
-  }
-
-  @inline
-  private def impl[F[_] : Async : Env, Thrift[_[_]] : HigherKindedToMethodPerEndpoint : Instrument](addr: SocketAddress[IpAddress],
-                                                                                                    label: String,
-                                                                                                    iface: Thrift[F],
-                                                                                                    entryPoint: EntryPoint[F]
-                                                                                                   )
-                                                                                                   (implicit ec: ExecutionContext,
-                                                                                                    LocalSpan: Local[F, Span[F]]): Resource[F, ListeningServer] =
     Dispatcher.parallel[F]
       .map(unsafeMapKToFuture(_, iface.instrument, entryPoint))
       .flatMap(t => Resource.make(acquire(addr, label, t))(release[F]))
