@@ -64,19 +64,22 @@ val thriftServer: IO[Nothing] = ThriftServer("address", fooImpl)
 Add Scalafix to your project's build by [following the instructions](https://scalacenter.github.io/scalafix/docs/users/installation.html#sbt):
 
 1. Add the Scalafix plugin to the project by adding this to `project/plugins.sbt`:
+
     ```scala
-    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.34")
+    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.10.4")
     ```
 
 2. Enable SemanticDB by adding this to `build.sbt`:
+
     ```scala
     ThisBuild / semanticdbEnabled := true
     ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
     ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
-    ThisBuild / scalafixDependencies += "com.dwolla" %% "finagle-tagless-scalafix" % "0.0.7"
+    ThisBuild / scalafixDependencies += "com.dwolla" %% "finagle-tagless-scalafix" % "0.2.0"
     ```
 
 3. Run the Scalafix rule automatically after generating the Thrift sources by adding this to `build.sbt`:
+
     ```scala
     Compile / scalafix / unmanagedSources := (Compile / sources).value
     Compile / compile := Def.taskDyn {
