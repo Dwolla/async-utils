@@ -3,6 +3,7 @@ import cats.effect._
 import cats.tagless._
 import com.dwolla.util.async.stdlib._
 
+import scala.annotation.nowarn
 import scala.concurrent.{ExecutionContext, Future}
 
 trait FooService[F[_]] {
@@ -20,6 +21,8 @@ class FutureFoo(implicit ec: ExecutionContext) extends FooService[Future] {
 }
 
 object Demo extends IOApp {
+
+  @nowarn("msg=discarded non-Unit value|unused value of type cats\\.effect\\.IO")
   override def run(args: List[String]): IO[ExitCode] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val fooService: FooService[IO] =
