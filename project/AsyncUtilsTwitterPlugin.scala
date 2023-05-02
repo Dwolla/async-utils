@@ -1,6 +1,7 @@
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
+import org.typelevel.sbt.mergify.MergifyPlugin.autoImport.*
 import sbt.Keys.*
 import sbt.internal.ProjectMatrix
 import sbt.*
@@ -15,7 +16,7 @@ object AsyncUtilsTwitterPlugin extends AutoPlugin {
   override def trigger = noTrigger
 
   override def requires: Plugins =
-    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin // TODO && MergifyPlugin
+    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin && MergifyPlugin
 
   object autoImport {
     lazy val allProjects: Seq[Project] =
@@ -230,7 +231,11 @@ object AsyncUtilsTwitterPlugin extends AutoPlugin {
       .dependsOn(`async-utils-finagle`)
 
   override def buildSettings: Seq[Def.Setting[?]] = Seq(
-    scalaVersion := SCALA_2_13
+    scalaVersion := SCALA_2_13,
+    mergifyLabelPaths :=
+      List("scalafix", "twitter-finagle", "twitter-futures", "finagle-natchez")
+        .map(x => x -> file(x))
+        .toMap
   )
 
   override def extraProjects: Seq[Project] = autoImport.allProjects
