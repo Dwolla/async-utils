@@ -1,5 +1,6 @@
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
+import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
 import org.typelevel.sbt.mergify.MergifyPlugin.autoImport.*
 import sbt.Keys.*
@@ -235,7 +236,23 @@ object AsyncUtilsTwitterPlugin extends AutoPlugin {
     mergifyLabelPaths :=
       List("scalafix", "twitter-finagle", "twitter-futures", "finagle-natchez")
         .map(x => x -> file(x))
-        .toMap
+        .toMap,
+
+    /* this is misleading, because we're actually running the build for all supported
+     * scala versions, but unfortunately this seems to be our best option until
+     * sbt-typelevel 0.5.
+     *
+     * sbt-projectmatrix creates separate projects for each crossed Scala version
+     * setting githubWorkflowScalaVersions to a single (ignored) version minimizes
+     * the build matrix, and setting githubWorkflowBuildSbtStepPreamble to an empty
+     * list ensures that the build phase ignores the scala version set in
+     * githubWorkflowScalaVersions.
+     *
+     * '++ ${{ matrix.scala }}' will still be used in the Publish stage, but it
+     * sounds like the tlCiRelease will do the right thing anyway.
+     */
+    githubWorkflowScalaVersions := Seq("2.13"),
+    githubWorkflowBuildSbtStepPreamble := Nil,
   )
 
   override def extraProjects: Seq[Project] = autoImport.allProjects
