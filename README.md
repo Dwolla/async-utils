@@ -8,7 +8,19 @@ This library implements the [`AsyncFunctorK` typeclass](https://github.com/Dwoll
 
 See the [async-utils README](https://github.com/Dwolla/async-utils) for more background on why `AsyncFunctorK` exists and how it works.
 
-This repository was forked from [async-utils](https://github.com/Dwolla/async-utils) due to Twitter's `{YEAR}-{MONTH}` version scheme, where the combination of the two forms a major version. Twitter does not typically maintain binary compatibility between versions, so when new versions are released, we expect to have to release a new major version of this project to support the new version.
+## Twitter Ecosystem Releases
+This repository was forked from [async-utils](https://github.com/Dwolla/async-utils) due to 
+Twitter's `{YEAR}-{MONTH}` version scheme, where the combination of the two forms a major version.
+
+The "current" version of the artifacts published by this project intend to track
+the latest Twitter ecosystem release, with previously supported versions published
+as supplemental artifacts with the supported release version appended to
+the artifact name.
+
+For example, the latest Twitter ecosystem version is `22.7.0`, so the latest version of
+`com.dwolla::async-utils-twitter` depends on `com.twitter::util-core:22.7.0`. In addition,
+we publish artifacts named like `com.dwolla::async-utils-twitter-22.4.0` for each of the
+previously supported Twitter ecosystem releases.
 
 ## Twitter Futures
 
