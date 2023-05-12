@@ -13,6 +13,7 @@ ThisBuild / startYear := Option(2021)
 ThisBuild / tlSonatypeUseLegacyHost := true
 ThisBuild / tlBaseVersion := "0.3"
 ThisBuild / tlCiReleaseBranches := Seq("main")
+ThisBuild / mergifyRequiredJobs ++= Seq("validate-steward")
 ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
   author = "dwolla-oss-scala-steward[bot]",
   mergeMinors = true,
