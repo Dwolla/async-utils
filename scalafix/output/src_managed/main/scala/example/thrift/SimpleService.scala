@@ -751,7 +751,7 @@ object SimpleService extends _root_.com.twitter.finagle.thrift.GeneratedThriftSe
     implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
       _root_.cats.tagless.Derive.readerT[SimpleService, F]
 
-    implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
+    implicit val SimpleServiceInstrument: _root_.cats.tagless.aop.Instrument[SimpleService] = _root_.cats.tagless.Derive.instrument[SimpleService]
 
     implicit def SimpleServiceHigherKindedToMethodPerEndpoint: _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] =
       new _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] {

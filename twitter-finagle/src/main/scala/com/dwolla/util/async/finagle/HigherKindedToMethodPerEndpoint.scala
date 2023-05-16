@@ -31,4 +31,15 @@ trait HigherKindedToMethodPerEndpoint[Alg[_[_]]] {
 
 object HigherKindedToMethodPerEndpoint {
   def apply[Alg[_[_]]](implicit hktmpe: HigherKindedToMethodPerEndpoint[Alg]): hktmpe.type = hktmpe
+
+  implicit def mpeClassTag[Alg[_[_]]](implicit MPE: HigherKindedToMethodPerEndpoint[Alg]): scala.reflect.ClassTag[MPE.MPE] =
+    MPE.mpeClassTag
+
+  implicit def toToMethodPerEndpointOps[Alg[_[_]]](alg: Alg[Future]): ToMethodPerEndpointOps[Alg] =
+    new ToMethodPerEndpointOps(alg)
+}
+
+class ToMethodPerEndpointOps[Alg[_[_]]](val alg: Alg[Future]) extends AnyVal {
+  def toMethodPerEndpoint(implicit HK2MPE: HigherKindedToMethodPerEndpoint[Alg]): HK2MPE.MPE =
+    HK2MPE.toMethodPerEndpoint(alg)
 }

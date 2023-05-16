@@ -36,7 +36,7 @@ class AddCatsTaglessInstancesTest extends FunSuite {
        |    implicit def SimpleService2InReaderT[F[_]]: SimpleService2[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService2[F], β0]})#Λ] =
        |      _root_.cats.tagless.Derive.readerT[SimpleService2, F]
        |
-       |    implicit val SimpleService2FunctorK: _root_.cats.tagless.FunctorK[SimpleService2] = _root_.cats.tagless.Derive.functorK[SimpleService2]
+       |    implicit val SimpleService2Instrument: _root_.cats.tagless.aop.Instrument[SimpleService2] = _root_.cats.tagless.Derive.instrument[SimpleService2]
        |  }
        |
        |  trait MethodPerEndpoint extends SimpleService2[Future]
@@ -75,7 +75,7 @@ class AddCatsTaglessInstancesTest extends FunSuite {
         |    implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
         |      _root_.cats.tagless.Derive.readerT[SimpleService, F]
         |
-        |    implicit val SimpleServiceFunctorK: _root_.cats.tagless.FunctorK[SimpleService] = _root_.cats.tagless.Derive.functorK[SimpleService]
+        |    implicit val SimpleServiceInstrument: _root_.cats.tagless.aop.Instrument[SimpleService] = _root_.cats.tagless.Derive.instrument[SimpleService]
         |
         |    implicit def SimpleServiceHigherKindedToMethodPerEndpoint: _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] =
         |      new _root_.com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint[SimpleService] {
