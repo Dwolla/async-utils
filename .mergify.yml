@@ -33,6 +33,46 @@ pull_request_rules:
       add:
       - examples
       remove: []
+- name: Label input PRs
+  conditions:
+  - files~=^scalafix/input/
+  actions:
+    label:
+      add:
+      - input
+      remove: []
+- name: Label input-dependency PRs
+  conditions:
+  - files~=^scalafix/input-dependency/
+  actions:
+    label:
+      add:
+      - input-dependency
+      remove: []
+- name: Label output PRs
+  conditions:
+  - files~=^scalafix/output/
+  actions:
+    label:
+      add:
+      - output
+      remove: []
+- name: Label output-dependency PRs
+  conditions:
+  - files~=^scalafix/output-dependency/
+  actions:
+    label:
+      add:
+      - output-dependency
+      remove: []
+- name: Label rules PRs
+  conditions:
+  - files~=^scalafix/rules/
+  actions:
+    label:
+      add:
+      - rules
+      remove: []
 - name: Label scala-futures PRs
   conditions:
   - files~=^scala-futures/
@@ -40,4 +80,28 @@ pull_request_rules:
     label:
       add:
       - scala-futures
+      remove: []
+- name: Label tests PRs
+  conditions:
+  - files~=^scalafix/tests/
+  actions:
+    label:
+      add:
+      - tests
+      remove: []
+- name: Label twitter-finagle PRs
+  conditions:
+  - files~=^twitter-finagle/
+  actions:
+    label:
+      add:
+      - twitter-finagle
+      remove: []
+- name: Label twitter-futures PRs
+  conditions:
+  - files~=^twitter-futures/
+  actions:
+    label:
+      add:
+      - twitter-futures
       remove: []
