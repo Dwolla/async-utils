@@ -56,7 +56,7 @@ object AsyncUtilsTwitterPlugin extends AutoPlugin {
   private val SCALA_2_12 = "2.12.17"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
-  private val CatsEffect3V = "3.4.11"
+  private val CatsEffect3V = "3.5.0"
   private val CatsTaglessV: String = "0.14.0"
   private val libthriftV: String = "0.10.0"
 
