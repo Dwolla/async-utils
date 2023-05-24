@@ -58,7 +58,7 @@ object AsyncUtilsTwitterPlugin extends AutoPlugin {
 
   private val CatsEffect3V = "3.4.11"
   private val CatsTaglessV: String = "0.14.0"
-  private val libthriftV: String = "0.10.0"
+  private val libthriftV: String = "0.18.1"
 
   private val scala2CompilerPlugins: Seq[ModuleID] = Seq(
     compilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
