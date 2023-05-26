@@ -30,4 +30,4 @@ lazy val `async-utils-root` = (project in file("."))
     publish / skip := true,
     publishArtifact := false,
   )
-  .enablePlugins(AsyncUtilsTwitterPlugin)
+  .enablePlugins(AsyncUtilsBuildPlugin)

@@ -18,7 +18,7 @@ import scalafix.sbt.ScalafixPlugin.autoImport.*
 import org.scalajs.sbtplugin.ScalaJSPlugin
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 
-object AsyncUtilsTwitterPlugin extends AutoPlugin {
+object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
 
   override def requires: Plugins =
