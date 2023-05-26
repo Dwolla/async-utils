@@ -166,8 +166,8 @@ object AsyncUtilsTwitterPlugin extends AutoPlugin {
         moduleName := name.value + moduleNameSuffix(v),
         libraryDependencies ++= {
           Seq(
-            "org.tpolecat" %% "natchez-core" % "0.3.1",
-            "org.tpolecat" %% "natchez-mtl" % "0.3.1",
+            "org.tpolecat" %% "natchez-core" % "0.3.2",
+            "org.tpolecat" %% "natchez-mtl" % "0.3.2",
             "com.comcast" %% "ip4s-core" % "3.3.0",
             "org.typelevel" %% "cats-mtl" % "1.3.1",
             "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
