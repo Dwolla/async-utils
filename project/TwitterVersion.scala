@@ -2,7 +2,7 @@ import sbt.*
 import sbt.Keys.*
 import sbt.internal.ProjectMatrix
 
-case class TwitterVersion(version: String, isCurrent: Boolean) extends VirtualAxis.WeakAxis {
+case class TwitterVersion(version: Version) extends VirtualAxis.WeakAxis {
   override def directorySuffix: String =
     s"-twitter-$version"
 

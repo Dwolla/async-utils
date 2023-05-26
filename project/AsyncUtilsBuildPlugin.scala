@@ -1,22 +1,18 @@
+import _root_.scalafix.sbt.ScalafixTestkitPlugin.autoImport.*
+import _root_.scalafix.sbt.{ScalafixPlugin, ScalafixTestkitPlugin}
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
 import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
 import org.typelevel.sbt.mergify.MergifyPlugin.autoImport.*
-import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
-import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
-import sbt.Keys.*
-import sbt.internal.{MatrixClasspathDep, ProjectMatrix}
 import sbt.*
-import sbt.internal.*
+import sbt.Keys.*
+import sbt.internal.ProjectMatrix
+import sbt.librarymanagement.DependencyBuilders.OrganizationArtifactName
 import sbtprojectmatrix.ProjectMatrixPlugin
 import sbtprojectmatrix.ProjectMatrixPlugin.autoImport.*
-import scalafix.sbt.ScalafixTestkitPlugin
-import scalafix.sbt.ScalafixTestkitPlugin.autoImport.*
-import scalafix.sbt.ScalafixPlugin
 import scalafix.sbt.ScalafixPlugin.autoImport.*
-import org.scalajs.sbtplugin.ScalaJSPlugin
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 
 object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
@@ -29,15 +25,21 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       `async-utils-core`.componentProjects ++
         `async-utils`.componentProjects ++
         examples.componentProjects ++
-        `async-utils-twitter`.componentProjects ++
-        `async-utils-finagle`.componentProjects ++
-        `async-utils-finagle-natchez`.componentProjects ++
-        `scalafix-rules`.componentProjects ++
-        `scalafix-input`.componentProjects ++
-        `scalafix-output`.componentProjects ++
-        `scalafix-input-dependency`.componentProjects ++
-        `scalafix-output-dependency`.componentProjects ++
-        `scalafix-tests`.componentProjects
+        List(
+          `async-utils-twitter`,
+          `async-utils-finagle`,
+          `async-utils-finagle-natchez`,
+          `scalafix-rules`,
+          `scalafix-input`,
+          `scalafix-output`,
+          `scalafix-input-dependency`,
+          `scalafix-output-dependency`,
+          `scalafix-tests`,
+        ).flatMap { pm =>
+          if (Set("scalafix-input", "scalafix-output", "scalafix-input-dependency", "scalafix-output-dependency", "scalafix-tests").contains(pm.id)) List(pm)
+          else List(pm, latestVersionAlias(pm))
+        }
+          .flatMap(_.componentProjects)
   }
 
   private val currentTwitterVersion = Version("22.7.0").get
@@ -70,27 +72,32 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val moduleBase =
     Def.setting((Compile / scalaSource).value.getParentFile)
 
-  private def moduleNameSuffix(v: Version): String =
-    if (v == currentTwitterVersion) "" else s"-$v"
-
   private def projectMatrixForSupportedTwitterVersions(id: String,
                                                        path: String)
-                                                      (s: Version => Seq[Setting[?]]): ProjectMatrix =
+                                                      (s: Version => List[Setting[?]]): ProjectMatrix =
     supportedVersions.foldLeft(ProjectMatrix(id, file(path)))(addTwitterCustomRow(s))
 
-  private def addTwitterCustomRow(s: Version => Seq[Setting[?]])
+  private def addTwitterCustomRow(s: Version => List[Setting[?]])
                                  (p: ProjectMatrix, v: Version): ProjectMatrix =
     p.customRow(
       scalaVersions = Scala2Versions,
-      axisValues = List(TwitterVersion(v.toString, v == currentTwitterVersion), VirtualAxis.jvm),
-      settings = {
-        val versionIntroduced = tlVersionIntroduced := githubWorkflowScalaVersions.value.map(_ -> "1.0.1").toMap
-        val noMima = mimaPreviousArtifacts := Set.empty
-        val previousVersions = tlMimaPreviousVersions += "0.3.0"
-
-        if (v == currentTwitterVersion) versionIntroduced :: previousVersions :: s(v).toList else noMima :: s(v).toList
-      }
+      axisValues = List(TwitterVersion(v), VirtualAxis.jvm),
+      _.settings(
+        s(v)
+      )
     )
+
+  private def latestVersionAlias(p: ProjectMatrix): ProjectMatrix =
+    ProjectMatrix(s"${p.id}-latest", file(s".${p.id}-latest"))
+      .customRow(
+        scalaVersions = Scala2Versions,
+        axisValues = List(TwitterVersion(currentTwitterVersion), VirtualAxis.jvm),
+        _.settings(
+          moduleName := p.id,
+          tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
+        )
+      )
+      .dependsOn(p)
 
   private lazy val `async-utils-core` = projectMatrix
     .in(file("core"))
@@ -135,35 +142,39 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private lazy val `async-utils-twitter` =
     projectMatrixForSupportedTwitterVersions("async-utils-twitter", "twitter-futures") { v =>
-      Seq(
-        moduleName := name.value + moduleNameSuffix(v),
+      List(
+        moduleName := name.value + s"-$v",
         libraryDependencies ++= {
           Seq(
             "org.typelevel" %% "cats-effect" % CatsEffect3V,
-            "com.twitter" %% "util-core" % v.toString,
+            "com.twitter" %% "util-core" % v,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
+        mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
+        tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
       )
     }
       .dependsOn(`async-utils-core`)
 
   private lazy val `async-utils-finagle` =
     projectMatrixForSupportedTwitterVersions("async-utils-finagle", "twitter-finagle") { v =>
-      Seq(
-        moduleName := name.value + moduleNameSuffix(v),
+      List(
+        moduleName := name.value + s"-$v",
         libraryDependencies ++= {
           Seq(
-            "com.twitter" %% "finagle-thrift" % v.toString,
+            "com.twitter" %% "finagle-thrift" % v,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
+        mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
+        tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
       )
     }
       .dependsOn(`async-utils-twitter`)
 
   private lazy val `async-utils-finagle-natchez` =
     projectMatrixForSupportedTwitterVersions("async-utils-finagle-natchez", "finagle-natchez") { v =>
-      Seq(
-        moduleName := name.value + moduleNameSuffix(v),
+      List(
+        moduleName := name.value + s"-$v",
         libraryDependencies ++= {
           Seq(
             "org.tpolecat" %% "natchez-core" % "0.3.2",
@@ -173,15 +184,16 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
+        mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
+        tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
       )
     }
       .dependsOn(`async-utils-finagle`)
 
   private lazy val `scalafix-rules` =
-    projectMatrixForSupportedTwitterVersions("scalafix-rules", "scalafix/rules") { v =>
-      Seq(
-        name := "finagle-tagless-scalafix",
-        moduleName := name.value + moduleNameSuffix(v),
+    projectMatrixForSupportedTwitterVersions("finagle-tagless-scalafix", "scalafix/rules") { v =>
+      List(
+        moduleName := name.value + s"-$v",
         libraryDependencies ++= Seq(
           "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
           "org.scalameta" %% "munit" % "0.7.29" % Test,
@@ -190,17 +202,19 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         scalacOptions ~= {
           _.filterNot(_ == "-Xfatal-warnings")
         },
+        mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
+        tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
       )
     }
 
   private lazy val `scalafix-input` =
     projectMatrixForSupportedTwitterVersions("scalafix-input", "scalafix/input") { v =>
-      Seq(
+      List(
         publish / skip := true,
         publishArtifact := false,
         libraryDependencies ++= Seq(
-          "com.twitter" %% "scrooge-core" % v.toString,
-          "com.twitter" %% "finagle-thrift" % v.toString,
+          "com.twitter" %% "scrooge-core" % v,
+          "com.twitter" %% "finagle-thrift" % v,
           "org.apache.thrift" % "libthrift" % libthriftV,
         ),
         scalacOptions += "-nowarn",
@@ -217,12 +231,12 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private lazy val `scalafix-output` =
     projectMatrixForSupportedTwitterVersions("scalafix-output", "scalafix/output") { v =>
-      Seq(
+      List(
         publish / skip := true,
         publishArtifact := false,
         libraryDependencies ++= Seq(
-          "com.twitter" %% "scrooge-core" % v.toString,
-          "com.twitter" %% "finagle-thrift" % v.toString,
+          "com.twitter" %% "scrooge-core" % v,
+          "com.twitter" %% "finagle-thrift" % v,
           "org.apache.thrift" % "libthrift" % libthriftV,
           "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
           "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
@@ -239,7 +253,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private lazy val `scalafix-tests` =
     projectMatrixForSupportedTwitterVersions("scalafix-tests", "scalafix/tests") { v =>
-      Seq(
+      List(
         publish / skip := true,
         publishArtifact := false,
         libraryDependencies += "ch.epfl.scala" % "scalafix-testkit" % _root_.scalafix.sbt.BuildInfo.scalafixVersion % Test cross CrossVersion.full,
@@ -255,12 +269,12 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   lazy val `scalafix-input-dependency` =
     projectMatrixForSupportedTwitterVersions("scalafix-input-dependency", "scalafix/input-dependency") { v =>
-      Seq(
+      List(
         publish / skip := true,
         publishArtifact := false,
         libraryDependencies ++= {
           Seq(
-            "com.twitter" %% "finagle-thrift" % v.toString,
+            "com.twitter" %% "finagle-thrift" % v,
             "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
             "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
           )
@@ -270,12 +284,12 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private lazy val `scalafix-output-dependency` =
     projectMatrixForSupportedTwitterVersions("scalafix-output-dependency", "scalafix/output-dependency") { v =>
-      Seq(
+      List(
         publish / skip := true,
         publishArtifact := false,
         libraryDependencies ++= {
           Seq(
-            "com.twitter" %% "util-core" % v.toString,
+            "com.twitter" %% "util-core" % v,
             "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
             "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV,
           )
@@ -317,4 +331,9 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   )
 
   override def extraProjects: Seq[Project] = autoImport.allProjects
+
+  private implicit class OrganizationArtifactNameOps(val oan: OrganizationArtifactName) extends AnyVal {
+    def %(vav: Version): ModuleID =
+      oan % vav.toString
+  }
 }
