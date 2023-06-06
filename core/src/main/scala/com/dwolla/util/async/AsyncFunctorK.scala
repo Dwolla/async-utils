@@ -21,6 +21,6 @@ class AsyncFunctorKOps[Alg[_[_]], F[_]](val alg: Alg[F]) extends AnyVal {
 }
 
 trait ToAsyncFunctorKOps {
-  implicit def toAsyncFunctorKOps[Alg[_[_]], F[_]](alg: Alg[F]) =
+  implicit def toAsyncFunctorKOps[Alg[_[_]], F[_]](alg: Alg[F]): AsyncFunctorKOps[Alg, F] =
     new AsyncFunctorKOps[Alg, F](alg)
 }
