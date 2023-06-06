@@ -178,7 +178,7 @@ Add Scalafix to your project's build by [following the instructions](https://sca
 1. Add the Scalafix plugin to the project by adding this to `project/plugins.sbt`:
 
     ```scala
-    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.10.4")
+    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.0")
     ```
 
 2. Enable SemanticDB by adding this to `build.sbt`:
