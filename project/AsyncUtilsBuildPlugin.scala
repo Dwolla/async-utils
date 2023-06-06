@@ -2,6 +2,9 @@ import _root_.scalafix.sbt.ScalafixTestkitPlugin.autoImport.*
 import _root_.scalafix.sbt.{ScalafixPlugin, ScalafixTestkitPlugin}
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
+import org.scalajs.jsenv.JSEnv
+import org.scalajs.jsenv.nodejs.NodeJSEnv
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
 import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
@@ -109,6 +112,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
+      jsEnv := nvmJsEnv.value,
     )
     .jvmPlatform(Scala2Versions)
     .jsPlatform(Scala2Versions)
@@ -123,6 +127,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           "org.typelevel" %% "cats-effect" % CatsEffect3V,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
+      jsEnv := nvmJsEnv.value,
     )
     .dependsOn(`async-utils-core`)
 
@@ -328,6 +333,18 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
      */
     githubWorkflowScalaVersions := Seq("2.13"),
     githubWorkflowBuildSbtStepPreamble := Nil,
+
+    nodeExecutable :=
+      scala.util.Try {
+        import scala.sys.process.*
+
+        Process("bash" :: "-c" :: ". $HOME/.nvm/nvm.sh --no-use && nvm which" :: Nil)
+          .lineStream
+          .last
+      }
+        .toOption
+        .map(file),
+    nvmJsEnv := new NodeJSEnv(nodeExecutable.value.map(_.getAbsolutePath).foldLeft(NodeJSEnv.Config())(_ withExecutable _))
   )
 
   override def extraProjects: Seq[Project] = autoImport.allProjects
@@ -336,4 +353,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     def %(vav: Version): ModuleID =
       oan % vav.toString
   }
+
+  private lazy val nvmJsEnv: TaskKey[JSEnv] = taskKey("use nvm to find node")
+  private lazy val nodeExecutable: TaskKey[Option[File]] = taskKey("path to Node executable for JS tasks")
 }
