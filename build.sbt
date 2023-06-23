@@ -19,8 +19,7 @@ ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
   author = "dwolla-oss-scala-steward[bot]",
   mergeMinors = true,
 ))}
-
-tpolecatScalacOptions += ScalacOptions.release("8")
+ThisBuild / tlJdkRelease := Option(8)
 
 ThisBuild / scalaVersion := "2.13.10"
 
