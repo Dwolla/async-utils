@@ -61,7 +61,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val SCALA_2_12 = "2.12.18"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
-  private val CatsEffect3V = "3.5.2"
+  private val CatsEffect3V = "3.5.3"
   private val CatsTaglessV: String = "0.15.0"
   private val libthriftV: String = "0.10.0"
 
@@ -182,8 +182,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         moduleName := name.value + s"-$v",
         libraryDependencies ++= {
           Seq(
-            "org.tpolecat" %% "natchez-core" % "0.3.4",
-            "org.tpolecat" %% "natchez-mtl" % "0.3.4",
+            "org.tpolecat" %% "natchez-core" % "0.3.5",
+            "org.tpolecat" %% "natchez-mtl" % "0.3.5",
             "com.comcast" %% "ip4s-core" % "3.4.0",
             "org.typelevel" %% "cats-mtl" % "1.4.0",
             "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
