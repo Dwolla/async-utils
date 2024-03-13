@@ -20,8 +20,7 @@ ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
   mergeMinors = true,
 ))}
 ThisBuild / tlJdkRelease := Option(8)
-
-ThisBuild / scalaVersion := "2.13.10"
+ThisBuild / tlFatalWarnings := githubIsWorkflowBuild.value
 
 lazy val `async-utils-root` = (project in file("."))
   .aggregate(allProjects.map(_.project) *)
