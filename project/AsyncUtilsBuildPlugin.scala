@@ -6,6 +6,7 @@ import org.scalajs.jsenv.JSEnv
 import org.scalajs.jsenv.nodejs.NodeJSEnv
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSettingsPlugin
 import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
 import org.typelevel.sbt.mergify.MergifyPlugin.autoImport.*
@@ -21,7 +22,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
 
   override def requires: Plugins =
-    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin && MergifyPlugin
+    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin && MergifyPlugin && TypelevelSettingsPlugin && WarnNonUnitStatements
 
   object autoImport {
     lazy val allProjects: Seq[Project] =
@@ -304,7 +305,6 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       .dependsOn(`async-utils-finagle`)
 
   override def buildSettings: Seq[Def.Setting[?]] = Seq(
-    scalaVersion := SCALA_2_13,
     mergifyLabelPaths :=
       List(
         "core",
@@ -356,4 +356,19 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private lazy val nvmJsEnv: TaskKey[JSEnv] = taskKey("use nvm to find node")
   private lazy val nodeExecutable: TaskKey[Option[File]] = taskKey("path to Node executable for JS tasks")
+}
+
+object WarnNonUnitStatements extends AutoPlugin {
+  override def trigger = allRequirements
+
+  override def projectSettings: Seq[Def.Setting[?]] = Seq(
+    scalacOptions ++= {
+      if (scalaVersion.value.startsWith("2.13"))
+        Seq("-Wnonunit-statement")
+      else if (scalaVersion.value.startsWith("2.12"))
+        Seq()
+      else
+        Nil
+    },
+  )
 }
