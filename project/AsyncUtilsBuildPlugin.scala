@@ -326,6 +326,31 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     githubWorkflowScalaVersions := Seq("per-project-matrix"),
     githubWorkflowBuildSbtStepPreamble := Nil,
 
+    organization := "com.dwolla",
+    homepage := Some(url("https://github.com/Dwolla/async-utils")),
+    licenses := Seq(License.MIT),
+    developers := List(
+      Developer(
+        "bpholt",
+        "Brian Holt",
+        "bholt+async-utils@dwolla.com",
+        url("https://dwolla.com")
+      ),
+    ),
+    startYear := Option(2021),
+    tlSonatypeUseLegacyHost := true,
+    tlBaseVersion := "1.1",
+    tlCiReleaseBranches := Seq("main"),
+    mergifyRequiredJobs ++= Seq("validate-steward"),
+    mergifyStewardConfig ~= {
+      _.map(_.copy(
+        author = "dwolla-oss-scala-steward[bot]",
+        mergeMinors = true,
+      ))
+    },
+    tlJdkRelease := Option(8),
+    tlFatalWarnings := githubIsWorkflowBuild.value,
+
     nodeExecutable :=
       scala.util.Try {
         import scala.sys.process.*
