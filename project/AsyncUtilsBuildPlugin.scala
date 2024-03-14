@@ -7,7 +7,12 @@ import org.scalajs.jsenv.nodejs.NodeJSEnv
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSettingsPlugin
+import org.typelevel.sbt.TypelevelSettingsPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSonatypeCiReleasePlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSonatypePlugin.autoImport.*
+import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
 import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
+import org.typelevel.sbt.gha.GitHubActionsPlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
 import org.typelevel.sbt.mergify.MergifyPlugin.autoImport.*
 import sbt.*
@@ -318,20 +323,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         .map(x => x -> file(x))
         .toMap,
 
-    /* this is misleading, because we're actually running the build for all supported
-     * scala versions, but unfortunately this seems to be our best option until
-     * sbt-typelevel 0.5.
-     *
-     * sbt-projectmatrix creates separate projects for each crossed Scala version
-     * setting githubWorkflowScalaVersions to a single (ignored) version minimizes
-     * the build matrix, and setting githubWorkflowBuildSbtStepPreamble to an empty
-     * list ensures that the build phase ignores the scala version set in
-     * githubWorkflowScalaVersions.
-     *
-     * '++ ${{ matrix.scala }}' will still be used in the Publish stage, but it
-     * sounds like the tlCiRelease will do the right thing anyway.
-     */
-    githubWorkflowScalaVersions := Seq("2.13"),
+    githubWorkflowScalaVersions := Seq("per-project-matrix"),
     githubWorkflowBuildSbtStepPreamble := Nil,
 
     nodeExecutable :=

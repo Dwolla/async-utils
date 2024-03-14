@@ -12,7 +12,6 @@ ThisBuild / developers := List(
 ThisBuild / startYear := Option(2021)
 ThisBuild / tlSonatypeUseLegacyHost := true
 ThisBuild / tlBaseVersion := "1.1"
-ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlCiReleaseBranches := Seq("main")
 ThisBuild / mergifyRequiredJobs ++= Seq("validate-steward")
 ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
