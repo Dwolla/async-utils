@@ -6,7 +6,13 @@ import org.scalajs.jsenv.JSEnv
 import org.scalajs.jsenv.nodejs.NodeJSEnv
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSettingsPlugin
+import org.typelevel.sbt.TypelevelSettingsPlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSonatypeCiReleasePlugin.autoImport.*
+import org.typelevel.sbt.TypelevelSonatypePlugin.autoImport.*
+import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
 import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
+import org.typelevel.sbt.gha.GitHubActionsPlugin.autoImport.*
 import org.typelevel.sbt.mergify.MergifyPlugin
 import org.typelevel.sbt.mergify.MergifyPlugin.autoImport.*
 import sbt.*
@@ -21,7 +27,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
 
   override def requires: Plugins =
-    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin && MergifyPlugin
+    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin && MergifyPlugin && TypelevelSettingsPlugin && WarnNonUnitStatements
 
   object autoImport {
     lazy val allProjects: Seq[Project] =
@@ -57,8 +63,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private val supportedVersions = (currentTwitterVersion :: oldVersions).sorted.reverse
 
-  private val SCALA_2_13: String = "2.13.12"
-  private val SCALA_2_12 = "2.12.18"
+  private val SCALA_2_13: String = "2.13.13"
+  private val SCALA_2_12 = "2.12.19"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
   private val CatsEffect3V = "3.5.4"
@@ -304,7 +310,6 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       .dependsOn(`async-utils-finagle`)
 
   override def buildSettings: Seq[Def.Setting[?]] = Seq(
-    scalaVersion := SCALA_2_13,
     mergifyLabelPaths :=
       List(
         "core",
@@ -318,21 +323,33 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         .map(x => x -> file(x))
         .toMap,
 
-    /* this is misleading, because we're actually running the build for all supported
-     * scala versions, but unfortunately this seems to be our best option until
-     * sbt-typelevel 0.5.
-     *
-     * sbt-projectmatrix creates separate projects for each crossed Scala version
-     * setting githubWorkflowScalaVersions to a single (ignored) version minimizes
-     * the build matrix, and setting githubWorkflowBuildSbtStepPreamble to an empty
-     * list ensures that the build phase ignores the scala version set in
-     * githubWorkflowScalaVersions.
-     *
-     * '++ ${{ matrix.scala }}' will still be used in the Publish stage, but it
-     * sounds like the tlCiRelease will do the right thing anyway.
-     */
-    githubWorkflowScalaVersions := Seq("2.13"),
+    githubWorkflowScalaVersions := Seq("per-project-matrix"),
     githubWorkflowBuildSbtStepPreamble := Nil,
+
+    organization := "com.dwolla",
+    homepage := Some(url("https://github.com/Dwolla/async-utils")),
+    licenses := Seq(License.MIT),
+    developers := List(
+      Developer(
+        "bpholt",
+        "Brian Holt",
+        "bholt+async-utils@dwolla.com",
+        url("https://dwolla.com")
+      ),
+    ),
+    startYear := Option(2021),
+    tlSonatypeUseLegacyHost := true,
+    tlBaseVersion := "1.1",
+    tlCiReleaseBranches := Seq("main"),
+    mergifyRequiredJobs ++= Seq("validate-steward"),
+    mergifyStewardConfig ~= {
+      _.map(_.copy(
+        author = "dwolla-oss-scala-steward[bot]",
+        mergeMinors = true,
+      ))
+    },
+    tlJdkRelease := Option(8),
+    tlFatalWarnings := githubIsWorkflowBuild.value,
 
     nodeExecutable :=
       scala.util.Try {
@@ -356,4 +373,19 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private lazy val nvmJsEnv: TaskKey[JSEnv] = taskKey("use nvm to find node")
   private lazy val nodeExecutable: TaskKey[Option[File]] = taskKey("path to Node executable for JS tasks")
+}
+
+object WarnNonUnitStatements extends AutoPlugin {
+  override def trigger = allRequirements
+
+  override def projectSettings: Seq[Def.Setting[?]] = Seq(
+    scalacOptions ++= {
+      if (scalaVersion.value.startsWith("2.13"))
+        Seq("-Wnonunit-statement")
+      else if (scalaVersion.value.startsWith("2.12"))
+        Seq()
+      else
+        Nil
+    },
+  )
 }

@@ -3,8 +3,8 @@ package com.dwolla.util.async.finagle
 import cats.Functor
 import cats.effect.Sync
 import cats.effect.std.Env
-import cats.syntax.all._
-import com.comcast.ip4s._
+import cats.syntax.all.*
+import com.comcast.ip4s.*
 import com.dwolla.util.async.finagle.ZipkinTracer.alwaysSample
 import com.twitter.finagle.stats.NullStatsReceiver
 import com.twitter.finagle.tracing.Tracer
@@ -35,7 +35,7 @@ object ZipkinTracerConfig {
       }
 }
 
-class ZipkinTracerConfig(val host: SocketAddress[_],
+class ZipkinTracerConfig(val host: SocketAddress[?],
                          val initialSampleRate: Float,
                          val tlsEnabled: Boolean,
                          val localServiceName: String,
@@ -47,14 +47,14 @@ class ZipkinTracerConfig(val host: SocketAddress[_],
     this(
       SocketAddress(host"127.0.0.1", port"9411"),
       alwaysSample,
-      false,
+      tlsEnabled = false,
       localServiceName,
-      true,
+      compressionEnabled = true,
       "zipkin",
       "/api/v2/spans"
     )
 
-  def withHost(update: SocketAddress[_]): ZipkinTracerConfig =
+  def withHost(update: SocketAddress[?]): ZipkinTracerConfig =
     new ZipkinTracerConfig(update, initialSampleRate, tlsEnabled, localServiceName, compressionEnabled, hostHeader, path)
 
   private[finagle] def build(): HttpZipkinTracer.Config =

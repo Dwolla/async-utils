@@ -1,17 +1,15 @@
 package com.dwolla.util.async.finagle
 
-import cats.data._
+import cats.data.*
 import cats.effect.std.Env
-import cats.effect.syntax.all._
-import cats.effect.{Trace => _, tracing => _, _}
-import cats.syntax.all._
-import cats.tagless._
+import cats.effect.syntax.all.*
+import cats.effect.{Trace as _, tracing as _, *}
+import cats.syntax.all.*
+import cats.tagless.*
 import com.dwolla.util.async.finagle.ThriftClient.initialAcquire
-import com.dwolla.util.async.twitter._
+import com.dwolla.util.async.twitter.*
 import com.twitter.util.{Closable, Future}
 import natchez.Trace
-
-import scala.language.reflectiveCalls
 
 /**
  * Build a Finagle Thrift client using the given Thrift
@@ -40,6 +38,7 @@ object TracedThriftClient {
    */
   def apply[Alg[_[_]] <: AnyRef {def asClosable: Closable}] = new PartiallyAppliedThriftClient[Alg]()
 
+  @annotation.nowarn("msg=dubious usage of method hashCode with unit value")
   class PartiallyAppliedThriftClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}] private[TracedThriftClient](val dummy: Unit = ()) extends AnyVal {
     /**
      * @param name the local service name to be set on the Zipkin tracer
