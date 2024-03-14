@@ -1,18 +1,17 @@
 package com.dwolla.util.async.finagle
 
-import cats.data._
-import cats.effect._
-import cats.syntax.all._
-import cats.tagless._
-import com.dwolla.util.async.twitter._
+import cats.data.*
+import cats.effect.*
+import cats.syntax.all.*
+import cats.tagless.*
+import com.dwolla.util.async.twitter.*
 import com.twitter.finagle.Thrift
 import com.twitter.util.{Closable, Future}
-
-import scala.language.reflectiveCalls
 
 object ThriftClient {
   def apply[Alg[_[_]] <: AnyRef {def asClosable: Closable}] = new PartiallyAppliedThriftClient[Alg]()
 
+  @annotation.nowarn("msg=dubious usage of method hashCode with unit value")
   class PartiallyAppliedThriftClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}] private[ThriftClient] (val dummy: Unit = ()) extends AnyVal {
     def apply[G[_] : Async](dest: String)
                            (implicit
