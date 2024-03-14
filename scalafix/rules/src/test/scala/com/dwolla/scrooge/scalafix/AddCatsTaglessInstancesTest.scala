@@ -55,21 +55,21 @@ class AddCatsTaglessInstancesTest extends FunSuite {
 
   test("rename MethodPerEndpoint to SimpleService[F[_]]") {
     val expectedPatchContent =
-      s"Add(MethodPerEndpoint, MethodPerEndpoint [${range("MethodPerEndpoint")(input.indexOf)}), SimpleService[F[_]])"
+      s"Add(MethodPerEndpoint, Ident(MethodPerEndpoint) [${range("MethodPerEndpoint")(input.indexOf)}), SimpleService[F[_]])"
 
     expect(patch.toString.contains(expectedPatchContent))
   }
 
   test("replace Future[*] with F[*]") {
     val expectedPatchContent =
-      s"Add(Future, Future [${range("Future")(input.indexOf)}), F)"
+      s"Add(Future, Ident(Future) [${range("Future")(input.indexOf)}), F)"
 
     expect(patch.toString.contains(expectedPatchContent))
   }
 
   test("add SimpleService companion object with implicits") {
     val expectedPatchContent =
-      """Add(}, } [467..468), }
+      """Add(}, RightBrace(}) [467..468), }
         |
         |  object SimpleService {
         |    implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
@@ -92,7 +92,7 @@ class AddCatsTaglessInstancesTest extends FunSuite {
 
   test("add replacement MethodPerEndpoint that extends SimpleService[Future]") {
     val expectedPatchContent =
-      """Add(}, } [467..468), }
+      """Add(}, RightBrace(}) [467..468), }
         |  trait MethodPerEndpoint extends SimpleService[Future])""".stripMargin
 
     expect(patch.toString.contains(expectedPatchContent))

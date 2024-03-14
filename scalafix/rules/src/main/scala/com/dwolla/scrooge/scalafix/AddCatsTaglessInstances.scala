@@ -1,16 +1,18 @@
 package com.dwolla.scrooge.scalafix
 
-import com.dwolla.scrooge.scalafix.AddCatsTaglessInstances._
-import scalafix.v1._
+import com.dwolla.scrooge.scalafix.AddCatsTaglessInstances.*
+import scalafix.v1.*
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.tokens.Token.Ident
 import GuardedPatchBuilder.toGuardedPatch
+
+import scala.meta.Type.ParamClause
 
 object ThriftServiceTrait {
   def unapply(subtree: Tree): Option[(String, Defn.Trait)] =
     PartialFunction.condOpt(subtree) {
-      case term@Defn.Trait(_, Type.Name(name), Nil, _, ExtendsThriftService(_)) => (name, term)
+      case term@Defn.Trait.After_4_6_0(_, Type.Name(name), ParamClause(Nil), _, ExtendsThriftService(_)) => (name, term)
     }
 }
 
@@ -43,7 +45,7 @@ object TemplateExtends {
     }
 
     PartialFunction.condOpt(subtree) {
-      case t@Template(_, TemplateInitsContainName(_), _, _) => t
+      case t@Template.After_4_4_0(_, TemplateInitsContainName(_), _, _, _) => t
     }
   }
 }
@@ -100,14 +102,14 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
     }
       .map(Patch.replaceToken(_, s"${generatedThriftServiceObject.name.value}[F[_]]"))
       .onlyIfMissing {
-        case Defn.Trait(_, Type.Name(name), _, _, _) if name == generatedThriftServiceObject.name.value => ()
+        case Defn.Trait.After_4_6_0(_, Type.Name(name), _, _, _) if name == generatedThriftServiceObject.name.value => ()
       }
       .in(generatedThriftServiceObject)
 
   private val addServiceCompanionObjectWithImplicits: Patch =
     Patch.addRight(methodPerEndpointTrait, companionObjectWithImplicits)
       .onlyIfMissing {
-        case Defn.Object(_, Term.Name(name), Template(_, List(), _, _)) if name == generatedThriftServiceObject.name.value => ()
+        case Defn.Object(_, Term.Name(name), Template.After_4_4_0(_, List(), _, _, _)) if name == generatedThriftServiceObject.name.value => ()
       }
       .in(generatedThriftServiceObject)
 
@@ -116,7 +118,7 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
       s"""
          |  trait MethodPerEndpoint extends ${generatedThriftServiceObject.name.value}[Future]""".stripMargin)
       .onlyIfMissing {
-        case Defn.Trait(_, Type.Name("MethodPerEndpoint"), _, _, ExtendsServiceTrait(_)) => ()
+        case Defn.Trait.After_4_6_0(_, Type.Name("MethodPerEndpoint"), _, _, ExtendsServiceTrait(_)) => ()
       }
       .in(generatedThriftServiceObject)
 
@@ -138,7 +140,7 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
           t.parent.fold(Patch.empty) {
             Patch.replaceToken(t.tokens.head, "F")
               .onlyIfMissing {
-                case Type.Apply(Type.Name(name), _) if name == generatedThriftServiceObject.name.value => ()
+                case Type.Apply.After_4_6_0(Type.Name(name), _) if name == generatedThriftServiceObject.name.value => ()
               }
               .in(_)
           }
@@ -163,8 +165,8 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
               methodPerEndpointTrait
                 .templ
                 .collect {
-                  case d@Decl.Def(_, name, _, paramss, _) =>
-                    s"override ${d.toString()} = fa.$name${invokeEachParamList(paramss)}"
+                  case d@Decl.Def.After_4_7_3(_, name, paramss, _) =>
+                    s"override ${d.toString()} = fa.$name${invokeEachParamList(paramss.flatMap(_.paramClauses.map(_.values)))}"
                 }
 
             val code =
@@ -182,7 +184,7 @@ case class ThriftServiceTrait(private val generatedThriftServiceObject: Defn.Obj
     modifyMethodPerEndpointTrait ++ modifyMethodPerEndpointCompanionObject
 }
 
-class GuardedPatch(private val tuple: (Patch, PartialFunction[Tree, _])) extends AnyVal {
+class GuardedPatch(private val tuple: (Patch, PartialFunction[Tree, ?])) extends AnyVal {
   def in(tree: Tree): Patch = {
     val empty = tree.collect(tuple._2).isEmpty
     if (empty) tuple._1
@@ -191,7 +193,7 @@ class GuardedPatch(private val tuple: (Patch, PartialFunction[Tree, _])) extends
 }
 
 class GuardedPatchBuilder(private val patch: Patch) extends AnyVal {
-  def onlyIfMissing(pf: PartialFunction[Tree, _]) = new GuardedPatch(patch -> pf)
+  def onlyIfMissing(pf: PartialFunction[Tree, ?]) = new GuardedPatch(patch -> pf)
 }
 
 object GuardedPatchBuilder {
@@ -210,13 +212,13 @@ case class Unapplied(patch: Patch) extends IdempotentPatch
 object IdempotentPatch {
   def apply(patch: Patch)
            (tree: Tree)
-           (pf: PartialFunction[Tree, _]): IdempotentPatch =
+           (pf: PartialFunction[Tree, ?]): IdempotentPatch =
     if (tree.collect(pf).nonEmpty) AlreadyApplied
     else Unapplied(patch)
 
   def apply(patch: Option[Patch])
            (tree: Tree)
-           (pf: PartialFunction[Tree, _]): IdempotentPatch =
+           (pf: PartialFunction[Tree, ?]): IdempotentPatch =
     IdempotentPatch(patch.getOrElse(Patch.empty))(tree)(pf)
 }
 
