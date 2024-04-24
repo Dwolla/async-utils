@@ -43,6 +43,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     lazy val allProjects: Seq[Project] =
       `async-utils-core`.componentProjects ++
         `async-utils`.componentProjects ++
+        `async-utils-log4cats`.componentProjects ++
         examples.componentProjects ++
         List(
           `async-utils-twitter`,
@@ -211,6 +212,25 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     }
       .dependsOn(`async-utils-finagle`)
 
+  private lazy val `async-utils-log4cats` = projectMatrix
+    .in(file("log4cats"))
+    .settings(
+      libraryDependencies ++= {
+        Seq(
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
+          "org.typelevel" %%% "cats-tagless-core" % CatsTaglessV,
+          "org.typelevel" %%% "log4cats-core" % "2.6.0",
+          "org.typelevel" %%% "log4cats-testing" % "2.6.0" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.0.0-M5" % Test,
+          "org.typelevel" %%% "scalacheck-effect-munit" % "2.0.0-M1" % Test,
+          "org.typelevel" %%% "cats-tagless-macros" % CatsTaglessV % Test,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      },
+      tlVersionIntroduced := Map("2.12" -> "1.2.0", "2.13" -> "1.2.0"),
+    )
+    .jvmPlatform(Scala2Versions)
+    .jsPlatform(Scala2Versions)
+
   private lazy val `scalafix-rules` =
     projectMatrixForSupportedTwitterVersions("finagle-tagless-scalafix", "scalafix/rules") { v =>
       List(
@@ -349,7 +369,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     ),
     startYear := Option(2021),
     tlSonatypeUseLegacyHost := true,
-    tlBaseVersion := "1.1",
+    tlBaseVersion := "1.2",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
