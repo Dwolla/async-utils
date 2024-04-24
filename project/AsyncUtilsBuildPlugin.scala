@@ -342,12 +342,10 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     tlBaseVersion := "1.1",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
-    mergifyStewardConfig ~= {
-      _.map(_.copy(
-        author = "dwolla-oss-scala-steward[bot]",
-        mergeMinors = true,
-      ))
-    },
+    mergifyStewardConfig ~= { _.map {
+      _.withAuthor("dwolla-oss-scala-steward[bot]")
+        .withMergeMinors(true)
+    }},
     tlJdkRelease := Option(8),
     tlFatalWarnings := githubIsWorkflowBuild.value,
 
