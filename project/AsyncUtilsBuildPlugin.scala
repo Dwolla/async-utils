@@ -103,7 +103,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         axisValues = List(TwitterVersion(currentTwitterVersion), VirtualAxis.jvm),
         _.settings(
           moduleName := p.id,
-          mimaPreviousArtifacts := Set.empty,
+          tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
         )
       )
       .dependsOn(p)
