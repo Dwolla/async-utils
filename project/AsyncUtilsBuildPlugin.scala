@@ -228,7 +228,12 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       },
       tlVersionIntroduced := Map("2.12" -> "1.2.0", "2.13" -> "1.2.0"),
     )
-    .jvmPlatform(Scala2Versions)
+    .jvmPlatform(Scala2Versions, Seq(
+      libraryDependencies ++= Seq(
+        "org.typelevel" %%% "log4cats-slf4j" % "2.6.0" % Test,
+        "ch.qos.logback" % "logback-classic" % "1.4.5" % Test,
+      ),
+    ))
     .jsPlatform(Scala2Versions)
 
   private lazy val `scalafix-rules` =
