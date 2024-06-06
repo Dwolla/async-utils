@@ -69,7 +69,7 @@ class AddCatsTaglessInstancesTest extends FunSuite {
 
   test("add SimpleService companion object with implicits") {
     val expectedPatchContent =
-      """Add(}, RightBrace(}) [467..468), }
+      """Add(}, RightBrace [467..468), }
         |
         |  object SimpleService {
         |    implicit def SimpleServiceInReaderT[F[_]]: SimpleService[({type Λ[β0] = _root_.cats.data.ReaderT[F, SimpleService[F], β0]})#Λ] =
@@ -92,12 +92,12 @@ class AddCatsTaglessInstancesTest extends FunSuite {
 
   test("add replacement MethodPerEndpoint that extends SimpleService[Future]") {
     val expectedPatchContent =
-      """Add(}, RightBrace(}) [467..468), }
+      """Add(}, RightBrace [467..468), }
         |  trait MethodPerEndpoint extends SimpleService[Future])""".stripMargin
 
     expect(patch.toString.contains(expectedPatchContent))
   }
-  
+
   test("the patches don't touch SimpleService2, which has already been fixed") {
     expect(!patch.toString.contains("SimpleService2"))
     expect(!patch.toString.contains(s"Add(Future, Future [${range("Future")(input.lastIndexOf)}), F)"))
