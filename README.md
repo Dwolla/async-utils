@@ -106,6 +106,13 @@ The Group ID for each artifact is `"com.dwolla"`. All artifacts are published to
 <td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
 <td align="center"><g-emoji class="g-emoji" alias="x" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/274c.png">❌</g-emoji></td>
 </tr>
+<tr>
+<td><code>"async-utils-log4cats"</code></td>
+<td>Semiautomatically instrument tagless algebras with input/output logging using <code>cats.Show</code></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+<td align="center"><g-emoji class="g-emoji" alias="white_check_mark" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png">✅</g-emoji></td>
+</tr>
 </tbody>
 </table>
 
@@ -254,6 +261,63 @@ The order in which the rule is executed matters. Follow these steps:
    and Finagle version being used in the project. Once this is updated, you can run the 
    `AddCatsTaglessInstances` rule on the updated generated code.
 
+## `async-utils-log4cats`
+
+Given a tagless algebra:
+
+```scala
+trait MyAlgebra[F[_]] {
+  def foo(foo: Int, bar: String): F[Boolean]
+}
+```
+
+ensure it has an `Aspect[MyAlgebra, Show, Show]` instance:
+
+```scala
+object MyAlgebra {
+  implicit val showInt: Show[Int] = Show.fromToString
+  implicit val showString: Show[String] = Show.show[String](identity)
+  implicit val showBoolean: Show[Boolean] = Show.fromToString
+  
+  implicit val loggingMyAlgebraAspect: Aspect[MyAlgebra, Show, Show] = Derive.aspect
+} 
+```
+
+Then, in a scope where you have an effect `F[_] : MonadCancelThrow : Logger`, enable
+logging by using the `withMethodLogging` transformation method on an instance of the algebra.
+
+```scala
+import cats.*
+import cats.effect.*
+import cats.tagless.*
+import cats.tagless.aop.*
+import com.dwolla.util.tagless.logging.*
+import org.typelevel.log4cats.slf4j.Slf4jFactory
+
+object MyApp extends IOApp.Simple {
+  private val fakeMyAlgebra: MyAlgebra[IO] = new MyAlgebra[IO] {
+    override def foo(foo: Int, bar: String): IO[Boolean] = IO.pure(true)
+  }
+
+  override def run: IO[Unit] =
+    Slf4jFactory.create[IO].create.flatMap { implicit logger =>
+      fakeMyAlgebra
+        .withMethodLogging
+        .foo(42, "The Answer to the Ultimate Question of Life, the Universe, and Everything")
+        .flatMap(IO.println)
+    }
+}
+```
+
+Running this results in something like this being printed to the console:
+
+```
+2024-04-24 14:26:41,281 | log_level=INFO  'MyAlgebra.foo(foo=42, bar=The Answer to the Ultimate Question of Life, the Universe, and Everything) returning true'
+true
+```
+
+The first line comes from the logging subsystem, which was logback via slf4j. 
+The second line comes from the `IO.println` in `MyApp`.
 
 ## Credits
 
