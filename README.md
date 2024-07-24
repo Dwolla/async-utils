@@ -178,7 +178,7 @@ Add Scalafix to your project's build by [following the instructions](https://sca
 1. Add the Scalafix plugin to the project by adding this to `project/plugins.sbt`:
 
     ```scala
-    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.0")
+    addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.12.1")
     ```
 
 2. Enable SemanticDB by adding this to `build.sbt`:
@@ -187,21 +187,14 @@ Add Scalafix to your project's build by [following the instructions](https://sca
     ThisBuild / semanticdbEnabled := true
     ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
     ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
-    ThisBuild / scalafixDependencies += "com.dwolla" %% "finagle-tagless-scalafix" % "0.2.0"
+    ThisBuild / scalafixDependencies += "com.dwolla" %% "finagle-tagless-scalafix" % "1.1.1"
     ```
 
 3. Run the Scalafix rule automatically after generating the Thrift sources by adding this to `build.sbt`:
 
     ```scala
     Compile / scalafix / unmanagedSources := (Compile / sources).value
-    Compile / compile := Def.taskDyn {
-      val compileOutput = (Compile / compile).value
-
-      Def.task {
-        (Compile / scalafix).toTask(" AddCatsTaglessInstances").value
-        compileOutput
-      }
-    }.value
+    scalafixOnCompile := true
     libraryDependencies ++= {
       val catsTaglessV = "0.14.0"
       Seq(
@@ -209,6 +202,12 @@ Add Scalafix to your project's build by [following the instructions](https://sca
         "org.typelevel" %% "cats-tagless-macros" % catsTaglessV,
       )
     }
+    ```
+
+    and adding this to `.scalafix.conf`:
+
+    ```hocon
+    triggered.rules = [ AddCatsTaglessInstances ]
     ```
 
 ### `AddCatsTaglessInstances`
