@@ -46,6 +46,7 @@ object ThriftClient {
         .withTransport.connectTimeout(config.transportConnectTimeout)
         .withRetryBudget(config.retryBudget)
         .withTracer(config.tracer)
+        .withStatsReceiver(config.statsReceiver)
         .build[MPE.MPE](dest)(MPE.mpeClassTag)
     }
 }
