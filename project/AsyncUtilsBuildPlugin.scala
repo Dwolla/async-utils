@@ -2,8 +2,11 @@ import _root_.scalafix.sbt.ScalafixTestkitPlugin.autoImport.*
 import _root_.scalafix.sbt.{ScalafixPlugin, ScalafixTestkitPlugin}
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
 import org.scalajs.jsenv.JSEnv
 import org.scalajs.jsenv.nodejs.NodeJSEnv
+import org.scalajs.sbtplugin.ScalaJSPlugin
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSettingsPlugin
@@ -27,12 +30,20 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
 
   override def requires: Plugins =
-    ProjectMatrixPlugin && ScalafixPlugin && MimaPlugin && MergifyPlugin && TypelevelSettingsPlugin && WarnNonUnitStatements
+    MergifyPlugin &&
+      MimaPlugin &&
+      PlatformDepsPlugin &&
+      ProjectMatrixPlugin &&
+      ScalafixPlugin &&
+      ScalaJSPlugin &&
+      TypelevelSettingsPlugin &&
+      WarnNonUnitStatements
 
   object autoImport {
     lazy val allProjects: Seq[Project] =
       `async-utils-core`.componentProjects ++
         `async-utils`.componentProjects ++
+        `async-utils-log4cats`.componentProjects ++
         examples.componentProjects ++
         List(
           `async-utils-twitter`,
@@ -114,8 +125,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       description := "Safely convert final tagless-style algebras implemented in Future to cats-effect Async",
       libraryDependencies ++= {
         Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
-          "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
+          "org.typelevel" %%% "cats-tagless-core" % CatsTaglessV,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
       jsEnv := nvmJsEnv.value,
@@ -130,7 +141,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     .settings(
       libraryDependencies ++= {
         Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
       jsEnv := nvmJsEnv.value,
@@ -200,6 +211,30 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       )
     }
       .dependsOn(`async-utils-finagle`)
+
+  private lazy val `async-utils-log4cats` = projectMatrix
+    .in(file("log4cats"))
+    .settings(
+      libraryDependencies ++= {
+        Seq(
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
+          "org.typelevel" %%% "cats-tagless-core" % CatsTaglessV,
+          "org.typelevel" %%% "log4cats-core" % "2.6.0",
+          "org.typelevel" %%% "log4cats-testing" % "2.6.0" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.0.0-M5" % Test,
+          "org.typelevel" %%% "scalacheck-effect-munit" % "2.0.0-M1" % Test,
+          "org.typelevel" %%% "cats-tagless-macros" % CatsTaglessV % Test,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      },
+      tlVersionIntroduced := Map("2.12" -> "1.2.0", "2.13" -> "1.2.0"),
+    )
+    .jvmPlatform(Scala2Versions, Seq(
+      libraryDependencies ++= Seq(
+        "org.typelevel" %%% "log4cats-slf4j" % "2.6.0" % Test,
+        "ch.qos.logback" % "logback-classic" % "1.4.5" % Test,
+      ),
+    ))
+    .jsPlatform(Scala2Versions)
 
   private lazy val `scalafix-rules` =
     projectMatrixForSupportedTwitterVersions("finagle-tagless-scalafix", "scalafix/rules") { v =>
@@ -339,7 +374,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     ),
     startYear := Option(2021),
     tlSonatypeUseLegacyHost := true,
-    tlBaseVersion := "1.1",
+    tlBaseVersion := "1.2",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
