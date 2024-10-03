@@ -192,7 +192,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "org.tpolecat" %% "natchez-mtl" % "0.3.6",
             "com.comcast" %% "ip4s-core" % "3.6.0",
             "org.typelevel" %% "cats-mtl" % "1.5.0",
-            "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
+            "io.zipkin.finagle2" %% "zipkin-finagle-http" % "23.0.1",
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
         mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
