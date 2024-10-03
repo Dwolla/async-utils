@@ -9,7 +9,6 @@ import org.typelevel.sbt.TypelevelMimaPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSettingsPlugin
 import org.typelevel.sbt.TypelevelSettingsPlugin.autoImport.*
 import org.typelevel.sbt.TypelevelSonatypeCiReleasePlugin.autoImport.*
-import org.typelevel.sbt.TypelevelSonatypePlugin.autoImport.*
 import org.typelevel.sbt.TypelevelVersioningPlugin.autoImport.*
 import org.typelevel.sbt.gha.GenerativePlugin.autoImport.*
 import org.typelevel.sbt.gha.GitHubActionsPlugin.autoImport.*
@@ -22,6 +21,7 @@ import sbt.librarymanagement.DependencyBuilders.OrganizationArtifactName
 import sbtprojectmatrix.ProjectMatrixPlugin
 import sbtprojectmatrix.ProjectMatrixPlugin.autoImport.*
 import scalafix.sbt.ScalafixPlugin.autoImport.*
+import xerial.sbt.Sonatype.autoImport.*
 
 object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
@@ -338,7 +338,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2021),
-    tlSonatypeUseLegacyHost := true,
+    sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy,
     tlBaseVersion := "1.1",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
