@@ -339,7 +339,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     ),
     startYear := Option(2021),
     sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy,
-    tlBaseVersion := "1.1",
+    tlBaseVersion := "1.2",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
