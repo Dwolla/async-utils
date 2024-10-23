@@ -1,6 +1,7 @@
 package com.dwolla.util.async.finagle
 
 import com.twitter.finagle.service.RetryBudget
+import com.twitter.finagle.stats.{DefaultStatsReceiver, StatsReceiver}
 import com.twitter.finagle.tracing.{DefaultTracer, Tracer}
 import com.twitter.util.Duration
 
@@ -10,19 +11,22 @@ class ThriftClientConfiguration private(val requestTimeout: Duration,
                                         val sessionPoolMax: Int,
                                         val retryBudget: RetryBudget,
                                         val tracer: Tracer,
+                                        val statsReceiver: StatsReceiver,
                                        ) {
   def withRequestTimeout(x: Duration): ThriftClientConfiguration =
-    new ThriftClientConfiguration(x, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, retryBudget, tracer)
+    new ThriftClientConfiguration(x, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, retryBudget, tracer, statsReceiver)
   def withSessionAcquisitionTimeout(x: Duration): ThriftClientConfiguration =
-    new ThriftClientConfiguration(requestTimeout, x, transportConnectTimeout, sessionPoolMax, retryBudget, tracer)
+    new ThriftClientConfiguration(requestTimeout, x, transportConnectTimeout, sessionPoolMax, retryBudget, tracer, statsReceiver)
   def withTransportConnectTimeout(x: Duration): ThriftClientConfiguration =
-    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, x, sessionPoolMax, retryBudget, tracer)
+    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, x, sessionPoolMax, retryBudget, tracer, statsReceiver)
   def withSessionPoolMax(x: Int): ThriftClientConfiguration =
-    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, x, retryBudget, tracer)
+    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, x, retryBudget, tracer, statsReceiver)
   def withRetryBudget(x: RetryBudget): ThriftClientConfiguration =
-    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, x, tracer)
+    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, x, tracer, statsReceiver)
   def withTracer(x: Tracer): ThriftClientConfiguration =
-    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, retryBudget, x)
+    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, retryBudget, x, statsReceiver)
+  def withStatsReceiver(x: StatsReceiver): ThriftClientConfiguration =
+    new ThriftClientConfiguration(requestTimeout, sessionAcquisitionTimeout, transportConnectTimeout, sessionPoolMax, retryBudget, tracer, x)
 }
 
 object ThriftClientConfiguration {
@@ -33,5 +37,6 @@ object ThriftClientConfiguration {
     50,
     RetryBudget.Empty,
     DefaultTracer,
+    DefaultStatsReceiver
   )
 }
