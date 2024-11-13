@@ -208,7 +208,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         libraryDependencies ++= Seq(
           "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
           "org.scalameta" %% "munit" % "1.0.2" % Test,
-          "com.eed3si9n.expecty" %% "expecty" % "0.16.0" % Test,
+          "com.eed3si9n.expecty" %% "expecty" % "0.17.0" % Test,
         ),
         scalacOptions ~= {
           _.filterNot(_ == "-Xfatal-warnings")
