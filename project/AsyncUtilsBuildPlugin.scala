@@ -67,7 +67,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val SCALA_2_12 = "2.12.20"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
-  private val CatsEffect3V = "3.5.5"
+  private val CatsEffect3V = "3.5.6"
   private val CatsTaglessV: String = "0.16.2"
   private val libthriftV: String = "0.10.0"
 
