@@ -207,7 +207,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         moduleName := name.value + s"-$v",
         libraryDependencies ++= Seq(
           "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
-          "org.scalameta" %% "munit" % "1.0.2" % Test,
+          "org.scalameta" %% "munit" % "1.0.3" % Test,
           "com.eed3si9n.expecty" %% "expecty" % "0.16.0" % Test,
         ),
         scalacOptions ~= {
