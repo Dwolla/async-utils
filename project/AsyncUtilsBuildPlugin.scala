@@ -21,7 +21,6 @@ import sbt.librarymanagement.DependencyBuilders.OrganizationArtifactName
 import sbtprojectmatrix.ProjectMatrixPlugin
 import sbtprojectmatrix.ProjectMatrixPlugin.autoImport.*
 import scalafix.sbt.ScalafixPlugin.autoImport.*
-import xerial.sbt.Sonatype.autoImport.*
 
 object AsyncUtilsBuildPlugin extends AutoPlugin {
   override def trigger = noTrigger
@@ -338,7 +337,6 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2021),
-    sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy,
     tlBaseVersion := "1.2",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
