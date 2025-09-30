@@ -71,7 +71,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val libthriftV: String = "0.10.0"
 
   private val scala2CompilerPlugins: Seq[ModuleID] = Seq(
-    compilerPlugin("org.typelevel" % "kind-projector" % "0.13.3" cross CrossVersion.full)
+    compilerPlugin("org.typelevel" % "kind-projector" % "0.13.4" cross CrossVersion.full)
   )
 
   private def dedupKindProjectorOptions(opts: Seq[String]): Seq[String] =
