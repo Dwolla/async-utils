@@ -158,6 +158,9 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           Seq(
             "org.typelevel" %% "cats-effect" % CatsEffect3V,
             "com.twitter" %% "util-core" % v,
+            "org.scalameta" %% "munit" % "1.2.1" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,
+            "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0-RC1" % Test,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
         mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
