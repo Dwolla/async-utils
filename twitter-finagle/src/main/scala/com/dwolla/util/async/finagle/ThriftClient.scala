@@ -11,7 +11,6 @@ import com.twitter.util.{Closable, Future}
 object ThriftClient {
   def apply[Alg[_[_]] <: AnyRef {def asClosable: Closable}] = new PartiallyAppliedThriftClient[Alg]()
 
-  @annotation.nowarn("msg=dubious usage of method hashCode with unit value")
   class PartiallyAppliedThriftClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}] private[ThriftClient] (val dummy: Unit = ()) extends AnyVal {
     def apply[G[_] : Async](dest: String)
                            (implicit

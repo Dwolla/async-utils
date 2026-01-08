@@ -38,7 +38,6 @@ object TracedThriftClient {
    */
   def apply[Alg[_[_]] <: AnyRef {def asClosable: Closable}] = new PartiallyAppliedThriftClient[Alg]()
 
-  @annotation.nowarn("msg=dubious usage of method hashCode with unit value")
   class PartiallyAppliedThriftClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}] private[TracedThriftClient](val dummy: Unit = ()) extends AnyVal {
     /**
      * @param name the local service name to be set on the Zipkin tracer
