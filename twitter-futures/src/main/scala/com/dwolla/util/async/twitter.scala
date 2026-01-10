@@ -1,12 +1,15 @@
 package com.dwolla.util.async
 
-import cats._
-import cats.data._
-import cats.effect._
-import cats.syntax.all._
-import cats.tagless._
-import cats.tagless.syntax.all._
+import cats.*
+import cats.data.*
+import cats.effect.*
+import cats.syntax.all.*
+import cats.tagless.*
+import cats.tagless.syntax.all.*
 import com.twitter.util
+
+import java.util.concurrent.CancellationException
+import scala.util.control.NoStackTrace
 
 object twitter extends ToAsyncFunctorKOps {
   implicit def twitterFutureAsyncFunctorK[F[_]]: util.Future ~~> F = new (util.Future ~~> F) {
@@ -34,15 +37,43 @@ class PartiallyAppliedProvide[F[_]](private val dummy: Boolean = true) extends A
 }
 
 class PartiallyAppliedLiftFuture[F[_]] {
-  def apply[A](fa: F[util.Future[A]])
-              (implicit
-               F: Async[F]): F[A] =
-    Async[F].async[A] { cb =>
-      fa.map {
-        _.respond {
-          case util.Return(a) => cb(Right(a))
-          case util.Throw(ex) => cb(Left(ex))
+  def apply[A](ffa: F[util.Future[A]])
+              (implicit F: Async[F]): F[A] =
+    MonadCancelThrow[F].uncancelable { (poll: Poll[F]) =>
+      poll {
+        Async[F].async[A] { cb: (Either[Throwable, A] => Unit) =>
+          ffa
+            .flatMap { fa =>
+              Sync[F].delay {
+                fa.respond {
+                  case util.Return(a) => cb(Right(a))
+                  case util.Throw(ex) => cb(Left(ex))
+                }
+              }
+            }
+            .map { fa =>
+              Sync[F].delay {
+                fa.raise(CancelledViaCatsEffect)
+              }.some
+            }
         }
-      }.as(None)
+      }
+        .recoverWith(recoverFromCancelledViaCatsEffect)
     }
+
+  /**
+   * According to CE maintainer Daniel Spiewak in Discord, there's
+   * a race condition in the CE runtime that means sometimes it will
+   * see the future as completed (with the `CancelledViaCatsEffect`
+   * exception) before it transitions into the canceled state. This
+   * `recoverWith` should prevent that from happening.
+   */
+  private final def recoverFromCancelledViaCatsEffect[A](implicit F: Async[F]): PartialFunction[Throwable, F[A]] = {
+    case CancelledViaCatsEffect =>
+      Async[F].canceled >> Async[F].never
+  }
 }
+
+case object CancelledViaCatsEffect
+  extends CancellationException("Cancelled via cats-effect")
+    with NoStackTrace
