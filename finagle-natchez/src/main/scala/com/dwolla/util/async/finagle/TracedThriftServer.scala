@@ -8,6 +8,7 @@ import cats.syntax.all.*
 import cats.tagless.aop.*
 import cats.tagless.implicits.*
 import com.comcast.ip4s.{IpAddress, SocketAddress}
+import com.dwolla.util.async.UnsafeFToFuture
 import com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint.*
 import com.dwolla.util.async.twitter.*
 import com.twitter.finagle.*
@@ -17,7 +18,6 @@ import natchez.*
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
 
 /**
  * Starts a Finagle server that will host the given Thrift
@@ -91,53 +91,37 @@ object TracedThriftServer {
   private def release[F[_] : Async](s: ListeningServer): F[Unit] =
     liftFuture(Sync[F].delay(s.close()))
 
+
   private class UnsafeInstrumentationToFuture[F[_], Thrift[_[_]]] private[finagle](dispatcher: Dispatcher[F],
                                                                                    entryPoint: EntryPoint[F],
                                                                                    spanOptions: Span.Options,
                                                                                   )
-                                                                                  (implicit F: MonadCancelThrow[F],
+                                                                                  (implicit F: Sync[F],
                                                                                    LocalSpan: Local[F, Span[F]]) extends (Instrumentation[F, *] ~> Future) {
-    // provided for binary compatibility only
-    def this(dispatcher: Dispatcher[F],
-             entryPoint: EntryPoint[F],
-             spanOptions: Span.Options,
-             F: MonadCancelThrow[F],
-             @annotation.unused ec: ExecutionContext,
-             L: Local[F, Span[F]]) =
-      this(dispatcher, entryPoint, spanOptions)(F, L)
+    private val unsafeFToFuture: UnsafeFToFuture[F] = new UnsafeFToFuture[F](dispatcher)
 
     override def apply[A](instrumentation: Instrumentation[F, A]): Future[A] =
       currentTraceId().flatMap { maybeTraceId =>
-        val p = Promise[A]()
-
-        val fa = entryPoint.continueOrElseRoot(
-            name = s"${instrumentation.algebraName}.${instrumentation.methodName}",
-            kernel = maybeTraceId
-              .map(ZipkinKernel.asKernel)
-              .getOrElse(Kernel(Map.empty)),
-            options = spanOptions
-          )
-          .use(Local[F, Span[F]].scope(instrumentation.value))
-
-        dispatcher.unsafeToFuture(fa)
-          .onComplete {
-            case Success(a) => p.setValue(a)
-            case Failure(ex) => p.setException(ex)
-          }(parasiticEC)
-
-        p
-      }
-  }
-
-  private final val parasiticEC: ExecutionContext = new ExecutionContext {
-    override def execute(runnable: Runnable): Unit =
-      try runnable.run()
-      catch {
-        case f if NonFatal(f) => reportFailure(f)
+        unsafeFToFuture.apply {
+          entryPoint.continueOrElseRoot(
+              name = s"${instrumentation.algebraName}.${instrumentation.methodName}",
+              kernel = maybeTraceId
+                .map(ZipkinKernel.asKernel)
+                .getOrElse(Kernel(Map.empty)),
+              options = spanOptions
+            )
+            .use(Local[F, Span[F]].scope(instrumentation.value))
+        }
       }
 
-    override def reportFailure(cause: Throwable): Unit =
-      cause.printStackTrace()
+//    // provided for binary compatibility only
+// TODO    def this(dispatcher: Dispatcher[F],
+//             entryPoint: EntryPoint[F],
+//             spanOptions: Span.Options,
+//             F: MonadCancelThrow[F],
+//             @annotation.unused ec: ExecutionContext,
+//             L: Local[F, Span[F]]) =
+//      this(dispatcher, entryPoint, spanOptions)(F, L)
   }
 
   // the following methods are for binary compatibility only
