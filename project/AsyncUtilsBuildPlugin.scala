@@ -157,6 +157,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "org.typelevel" %% "cats-effect" % CatsEffect3V,
+            "org.typelevel" %% "cats-effect-testkit" % CatsEffect3V,
             "com.twitter" %% "util-core" % v,
             "org.scalameta" %% "munit" % "1.2.1" % Test,
             "org.typelevel" %% "munit-cats-effect" % "2.1.0" % Test,

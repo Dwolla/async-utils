@@ -1,16 +1,21 @@
 package com.dwolla.util.async
 
+import cats.*
 import cats.effect.*
 import cats.effect.std.*
+import cats.effect.testkit.TestControl
 import cats.syntax.all.*
+import cats.effect.syntax.all.*
 import com.dwolla.util.async.twitter.{CancelledViaCatsEffect, liftFuture}
 import com.twitter.util.{Duration as _, *}
-import munit.{CatsEffectSuite, ScalaCheckEffectSuite}
-import org.scalacheck.{Prop, Test}
+import munit.{AnyFixture, CatsEffectSuite, ScalaCheckEffectSuite}
+import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.effect.PropF
+import org.scalacheck.{Arbitrary, Gen, Prop, Test}
 
 import java.util.concurrent.CancellationException
 import scala.concurrent.duration.*
+import scala.util.control.NoStackTrace
 
 class TwitterFutureAsyncMapKTests extends CatsEffectSuite with ScalaCheckEffectSuite {
   override def munitIOTimeout: Duration = 1.minute
@@ -43,39 +48,46 @@ class TwitterFutureAsyncMapKTests extends CatsEffectSuite with ScalaCheckEffectS
     }
   }
 
-  test("a running Twitter Future lifted into IO can be completed or cancelled") {
-    PropF.forAllF { (i: Option[Int]) =>
-      (Supervisor[IO](await = true), Dispatcher.parallel[IO](await = true))
-        .tupled
-        .use { case (supervisor, dispatcher) =>
-          for {
-            capturedInterruptionThrowable <- Deferred[IO, Throwable]
-            twitterPromise <- IO(new Promise[Option[Int]]()).flatTap(captureThrowableOnInterruption(dispatcher, capturedInterruptionThrowable))
-            startedLatch <- CountDownLatch[IO](1)
-            promiseFiber <- IO.uncancelable { poll => // we want only the Future to be cancellable
-              supervisor.supervise(poll(liftFuture[IO](startedLatch.release.as(twitterPromise))))
-            }
-            _ <- startedLatch.await
-            _ <- completeOrCancel(i, twitterPromise, promiseFiber)
-            cancelledRef <- Ref[IO].of(false)
-            outcome <- promiseFiber.joinWith(cancelledRef.set(true).as(None))
-            wasCancelled <- cancelledRef.get
+  private val supervisorAndDispatcher = ResourceTestLocalFixture("supervisorAndDispatcher",
+    Supervisor[IO](await = true).product(Dispatcher.sequential[IO](await = true))
+  )
 
-            expectCancellation = i.isEmpty
-            _ <- interceptMessageIO[CancellationException]("Cancelled via cats-effect") {
-              capturedInterruptionThrowable
-                .get
-                .timeout(10.millis)
-                .map(_.asLeft)
-                .rethrow // interceptMessageIO works by throwing an exception, so we need to rethrow it to get the message
-            }
-              .whenA(expectCancellation)
-          } yield {
-            assertEquals(outcome, i)
-            assertEquals(wasCancelled, i.as(false).getOrElse(true))
-            assertEquals(Option(CancelledViaCatsEffect).filter(_ => expectCancellation), twitterPromise.isInterrupted)
+  override def munitFixtures: Seq[AnyFixture[?]] = super.munitFixtures ++ Seq(supervisorAndDispatcher)
+
+  test("a running Twitter Future lifted into IO can be completed (as success or failure) or cancelled") {
+    PropF.forAllF { (i: Outcome[IO, Throwable, Int]) =>
+      val (supervisor, dispatcher) = supervisorAndDispatcher()
+
+      TestControl.executeEmbed {
+        for {
+          expectedResult <- i.embed(CancelledViaCatsEffect.raiseError[IO, Int]).attempt
+          capturedInterruptionThrowable <- Deferred[IO, Throwable]
+          twitterPromise <- IO(new Promise[Int]()).flatTap(captureThrowableOnInterruption(dispatcher, capturedInterruptionThrowable))
+          startedLatch <- CountDownLatch[IO](1)
+          promiseFiber <- IO.uncancelable { poll => // we want only the Future to be cancellable
+            supervisor.supervise(poll(liftFuture[IO](startedLatch.release.as(twitterPromise))))
           }
+          _ <- startedLatch.await
+
+          (outcome, _) <- promiseFiber.join.both(completeOrCancel(i, twitterPromise, promiseFiber))
+
+          outcomeEmittedValue <- outcome.embed(CancelledViaCatsEffect.raiseError[IO, Int]).attempt
+
+          expectCancellation = i.isCanceled
+          _ <- interceptMessageIO[CancellationException]("Cancelled via cats-effect") {
+            capturedInterruptionThrowable
+              .get
+              .timeout(10.millis)
+              .map(_.asLeft)
+              .rethrow // interceptMessageIO works by throwing an exception, so we need to rethrow it to get the message
+          }
+            .whenA(expectCancellation)
+        } yield {
+          assertEquals(outcomeEmittedValue, expectedResult)
+          assertEquals(outcome.isCanceled, i.isCanceled)
+          assertEquals(Option(CancelledViaCatsEffect).filter(_ => expectCancellation), twitterPromise.isInterrupted)
         }
+      }
     }
   }
 
@@ -90,6 +102,14 @@ class TwitterFutureAsyncMapKTests extends CatsEffectSuite with ScalaCheckEffectS
     }
   }
 
+  private def genOutcome[F[_] : Applicative, A: Arbitrary]: Gen[Outcome[F, Throwable, A]] =
+    Gen.oneOf(
+      arbitrary[A].map(_.pure[F]).map(Outcome.succeeded[F, Throwable, A]),
+      Gen.const(new RuntimeException("arbitrary exception") with NoStackTrace).map(Outcome.errored[F, Throwable, A]),
+      Gen.const(Outcome.canceled[F, Throwable, A]),
+    )
+  private implicit def arbOutcome[F[_] : Applicative, A: Arbitrary]: Arbitrary[Outcome[F, Throwable, A]] = Arbitrary(genOutcome)
+
   private def captureThrowableOnInterruption[F[_] : Sync, A](dispatcher: Dispatcher[F],
                                                              capture: Deferred[F, Throwable])
                                                             (p: Promise[A]): F[Unit] =
@@ -99,14 +119,23 @@ class TwitterFutureAsyncMapKTests extends CatsEffectSuite with ScalaCheckEffectS
       }
     }
 
-  private def completeOrCancel[F[_] : Sync, A](maybeA: Option[A],
-                                               promise: Promise[Option[A]],
-                                               fiber: Fiber[F, Throwable, Option[A]]): F[Unit] =
+  private def completeOrCancel[F[_] : Async, A](maybeA: Outcome[F, Throwable, A],
+                                                promise: Promise[A],
+                                                fiber: Fiber[F, Throwable, A]): F[Unit] =
     maybeA match {
-      case Some(a) => Sync[F].delay {
-        promise.setValue(a.some)
-      }
-      case None =>
+      case Outcome.Succeeded(fa) =>
+        fa.flatMap(a => Sync[F].delay(promise.setValue(a))).void
+
+      case Outcome.Errored(ex) =>
+        // If the fiber is in the background (i.e. not joined) when it completes with an exception,
+        // the IO runtime will print its stacktrace to stderr. We always plan to `join` the fiber
+        // our tests are complete, so this feels like a false error report.
+
+        // To work around the issue, we delay the completion of the promise to make sure the fiber
+        // is joined before the promise is completed with the exception.
+        Sync[F].delay(promise.setException(ex)).delayBy(10.millis)
+
+      case Outcome.Canceled() =>
         fiber.cancel
     }
 
