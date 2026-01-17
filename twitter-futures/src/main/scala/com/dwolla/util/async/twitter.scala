@@ -3,11 +3,14 @@ package com.dwolla.util.async
 import cats.*
 import cats.data.*
 import cats.effect.*
+import cats.effect.std.Dispatcher
+import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import cats.tagless.*
 import cats.tagless.syntax.all.*
 import com.dwolla.util.async.twitter.CancelledViaCatsEffect
 import com.twitter.util
+import com.twitter.util.{Future, Promise}
 
 import java.util.concurrent.CancellationException
 import scala.util.control.NoStackTrace
@@ -27,6 +30,20 @@ object twitter extends ToAsyncFunctorKOps {
   private[async] case object CancelledViaCatsEffect
     extends CancellationException("Cancelled via cats-effect")
       with NoStackTrace
+
+  class UnsafeFToFuture[F[_] : Sync](dispatcher: Dispatcher[F]) extends (F ~> Future) {
+    override def apply[A](fa: F[A]): Future[A] = {
+      val p = Promise[A]()
+      dispatcher.unsafeRunAndForget {
+        fa.attempt.flatMap {
+            case Left(ex) => Sync[F].delay(p.setException(ex))
+            case Right(a) => Sync[F].delay(p.setValue(a))
+          }
+          .onCancel(Sync[F].delay(p.raise(CancelledViaCatsEffect)))
+      }
+      p
+    }
+  }
 }
 
 class PartiallyAppliedProvide[F[_]](private val dummy: Boolean = true) extends AnyVal {
