@@ -16,6 +16,7 @@ import com.twitter.util.{Future, Promise}
 import natchez.*
 
 import scala.concurrent.ExecutionContext
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /**
@@ -41,8 +42,7 @@ object TracedThriftServer {
                                                                                              iface: Thrift[F],
                                                                                              entryPoint: EntryPoint[F]
                                                                                             )
-                                                                                            (implicit ec: ExecutionContext,
-                                                                                             LocalSpan: Local[F, Span[F]]): Resource[F, ListeningServer] =
+                                                                                            (implicit LocalSpan: Local[F, Span[F]]): Resource[F, ListeningServer] =
     TracedThriftServer(addr, label, iface, entryPoint, Span.Options.Defaults.withSpanKind(Span.SpanKind.Server))
 
   /**
@@ -65,8 +65,7 @@ object TracedThriftServer {
                                                                                              entryPoint: EntryPoint[F],
                                                                                              spanOptions: Span.Options,
                                                                                             )
-                                                                                            (implicit ec: ExecutionContext,
-                                                                                             LocalSpan: Local[F, Span[F]]): Resource[F, ListeningServer] =
+                                                                                            (implicit LocalSpan: Local[F, Span[F]]): Resource[F, ListeningServer] =
     Dispatcher.parallel[F]
       .map(new UnsafeInstrumentationToFuture[F, Thrift](_, entryPoint, spanOptions))
       .map(iface.instrument.mapK(_))
@@ -92,12 +91,21 @@ object TracedThriftServer {
   private def release[F[_] : Async](s: ListeningServer): F[Unit] =
     liftFuture(Sync[F].delay(s.close()))
 
-  private class UnsafeInstrumentationToFuture[F[_] : MonadCancelThrow, Thrift[_[_]]](dispatcher: Dispatcher[F],
-                                                                                     entryPoint: EntryPoint[F],
-                                                                                     spanOptions: Span.Options,
-                                                                                    )
-                                                                                    (implicit ec: ExecutionContext,
-                                                                                     LocalSpan: Local[F, Span[F]]) extends (Instrumentation[F, *] ~> Future) {
+  private class UnsafeInstrumentationToFuture[F[_], Thrift[_[_]]] private[finagle](dispatcher: Dispatcher[F],
+                                                                                   entryPoint: EntryPoint[F],
+                                                                                   spanOptions: Span.Options,
+                                                                                  )
+                                                                                  (implicit F: MonadCancelThrow[F],
+                                                                                   LocalSpan: Local[F, Span[F]]) extends (Instrumentation[F, *] ~> Future) {
+    // provided for binary compatibility only
+    def this(dispatcher: Dispatcher[F],
+             entryPoint: EntryPoint[F],
+             spanOptions: Span.Options,
+             F: MonadCancelThrow[F],
+             @annotation.unused ec: ExecutionContext,
+             L: Local[F, Span[F]]) =
+      this(dispatcher, entryPoint, spanOptions)(F, L)
+
     override def apply[A](instrumentation: Instrumentation[F, A]): Future[A] =
       currentTraceId().flatMap { maybeTraceId =>
         val p = Promise[A]()
@@ -115,10 +123,50 @@ object TracedThriftServer {
           .onComplete {
             case Success(a) => p.setValue(a)
             case Failure(ex) => p.setException(ex)
-          }
+          }(parasiticEC)
 
         p
       }
   }
+
+  private final val parasiticEC: ExecutionContext = new ExecutionContext {
+    override def execute(runnable: Runnable): Unit =
+      try runnable.run()
+      catch {
+        case f if NonFatal(f) => reportFailure(f)
+      }
+
+    override def reportFailure(cause: Throwable): Unit =
+      cause.printStackTrace()
+  }
+
+  // the following methods are for binary compatibility only
+  def apply[F[_], Thrift[_[_]]](addr: SocketAddress[IpAddress],
+                                label: String,
+                                iface: Thrift[F],
+                                entryPoint: EntryPoint[F],
+
+                                F: Async[F],
+                                E: Env[F],
+                                H: HigherKindedToMethodPerEndpoint[Thrift],
+                                I: Instrument[Thrift],
+                                @annotation.unused ec: ExecutionContext,
+                                L: Local[F, Span[F]],
+                               ): Resource[F, ListeningServer] =
+    apply(addr, label, iface, entryPoint)(F, E, H, I, L)
+
+  def apply[F[_], Thrift[_[_]]](addr: SocketAddress[IpAddress],
+                                label: String,
+                                iface: Thrift[F],
+                                entryPoint: EntryPoint[F],
+                                spanOptions: Span.Options,
+                                F: Async[F],
+                                E: Env[F],
+                                H: HigherKindedToMethodPerEndpoint[Thrift],
+                                I: Instrument[Thrift],
+                                @annotation.unused ec: ExecutionContext,
+                                L: Local[F, Span[F]],
+                               ): Resource[F, ListeningServer] =
+    apply(addr, label, iface, entryPoint, spanOptions)(F, E, H, I, L)
 
 }
