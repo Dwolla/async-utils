@@ -191,8 +191,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         moduleName := name.value + s"-$v",
         libraryDependencies ++= {
           Seq(
-            "org.tpolecat" %% "natchez-core" % "0.3.8",
-            "org.tpolecat" %% "natchez-mtl" % "0.3.8",
+            "org.tpolecat" %% "natchez-core" % "0.3.9",
+            "org.tpolecat" %% "natchez-mtl" % "0.3.9",
             "com.comcast" %% "ip4s-core" % "3.8.0",
             "org.typelevel" %% "cats-mtl" % "1.6.0",
             "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
