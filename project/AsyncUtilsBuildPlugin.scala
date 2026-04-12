@@ -159,7 +159,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "org.typelevel" %% "cats-effect" % CatsEffect3V,
             "org.typelevel" %% "cats-effect-testkit" % CatsEffect3V,
             "com.twitter" %% "util-core" % v,
-            "org.scalameta" %% "munit" % "1.2.4" % Test,
+            "org.scalameta" %% "munit" % "1.3.0" % Test,
             "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
@@ -210,7 +210,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         moduleName := name.value + s"-$v",
         libraryDependencies ++= Seq(
           "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
-          "org.scalameta" %% "munit" % "1.2.4" % Test,
+          "org.scalameta" %% "munit" % "1.3.0" % Test,
           "com.eed3si9n.expecty" %% "expecty" % "0.17.1" % Test,
         ),
         scalacOptions ~= {
