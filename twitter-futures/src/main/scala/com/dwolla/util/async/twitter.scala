@@ -44,26 +44,24 @@ class PartiallyAppliedProvide[F[_]](private val dummy: Boolean = true) extends A
 class PartiallyAppliedLiftFuture[F[_]] {
   def apply[A](ffa: F[util.Future[A]])
               (implicit F: Async[F]): F[A] =
-    MonadCancelThrow[F].uncancelable { (poll: Poll[F]) =>
-      poll {
-        Async[F].async[A] { cb: (Either[Throwable, A] => Unit) =>
-          ffa
-            .flatMap { fa =>
-              Sync[F].delay {
-                fa.respond {
-                  case util.Return(a) => cb(Right(a))
-                  case util.Throw(ex) => cb(Left(ex))
-                }
+    Ref.of[F, Boolean](false).flatMap { cancellationRequested =>
+      Async[F].async[A] { cb: (Either[Throwable, A] => Unit) =>
+        ffa
+          .flatMap { fa =>
+            Sync[F].delay {
+              fa.respond {
+                case util.Return(a) => cb(Right(a))
+                case util.Throw(ex) => cb(Left(ex))
               }
             }
-            .map { fa =>
-              Sync[F].delay {
-                fa.raise(CancelledViaCatsEffect)
-              }.some
-            }
-        }
+          }
+          .map { fa =>
+            (cancellationRequested.set(true) >> Sync[F].delay {
+              fa.raise(CancelledViaCatsEffect)
+            }).some
+          }
       }
-        .recoverWith(recoverFromCancelledViaCatsEffect)
+        .recoverWith(recoverFromCancelledViaCatsEffect(cancellationRequested))
     }
 
   /**
@@ -72,9 +70,17 @@ class PartiallyAppliedLiftFuture[F[_]] {
    * see the future as completed (with the `CancelledViaCatsEffect`
    * exception) before it transitions into the canceled state. This
    * `recoverWith` should prevent that from happening.
+   *
+   * The future may also have been interrupted by a different fiber
+   * awaiting the same future, in which case this fiber was not
+   * cancelled and should see the failure instead of cancelling itself.
    */
-  private final def recoverFromCancelledViaCatsEffect[A](implicit F: Async[F]): PartialFunction[Throwable, F[A]] = {
+  private final def recoverFromCancelledViaCatsEffect[A](cancellationRequested: Ref[F, Boolean])
+                                                        (implicit F: Async[F]): PartialFunction[Throwable, F[A]] = {
     case CancelledViaCatsEffect =>
-      Async[F].canceled >> Async[F].never
+      cancellationRequested.get.ifM(
+        Async[F].canceled >> Async[F].never,
+        CancelledViaCatsEffect.raiseError[F, A],
+      )
   }
 }
