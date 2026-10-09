@@ -195,7 +195,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "org.tpolecat" %% "natchez-mtl" % "0.3.10",
             "com.comcast" %% "ip4s-core" % "3.8.0",
             "org.typelevel" %% "cats-mtl" % "1.7.0",
-            "io.zipkin.finagle2" %% "zipkin-finagle-http" % "22.4.0",
+            "io.zipkin.finagle2" %% "zipkin-finagle-http" % "23.0.2",
             // zipkin-finagle-http's own transitive requests for these pin to whatever Finagle
             // version it was built against (22.4.0), even when `v` here is newer. Declaring them
             // directly at `v` lets normal conflict resolution evict zipkin's stale request instead
