@@ -48,6 +48,26 @@ class TwitterFutureAsyncMapKTests extends CatsEffectSuite with ScalaCheckEffectS
     }
   }
 
+  test("cancelling one fiber awaiting a shared Twitter Future fails, rather than hangs or cancels, the other fibers awaiting it") {
+    TestControl.executeEmbed {
+      for {
+        promise <- IO(Promise[Int]()).flatTap(failWhenInterrupted[IO, Int])
+        cancelledFiberStarted <- CountDownLatch[IO](1)
+        bystanderFiberStarted <- CountDownLatch[IO](1)
+        cancelledFiber <- liftFuture[IO](cancelledFiberStarted.release.as(promise)).start
+        bystanderFiber <- liftFuture[IO](bystanderFiberStarted.release.as(promise)).start
+        _ <- cancelledFiberStarted.await >> bystanderFiberStarted.await
+        _ <- cancelledFiber.cancel
+        bystanderOutcome <- bystanderFiber.join
+      } yield {
+        bystanderOutcome match {
+          case Outcome.Errored(ex) => assertEquals(ex, CancelledViaCatsEffect)
+          case other => fail(s"expected the bystander fiber to fail, but its outcome was $other")
+        }
+      }
+    }
+  }
+
   private val supervisorAndDispatcher = ResourceTestLocalFixture("supervisorAndDispatcher",
     Supervisor[IO](await = true).product(Dispatcher.sequential[IO](await = true))
   )
@@ -116,6 +136,14 @@ class TwitterFutureAsyncMapKTests extends CatsEffectSuite with ScalaCheckEffectS
     Sync[F].delay {
       p.setInterruptHandler { case ex =>
         dispatcher.unsafeRunSync(capture.complete(ex).void)
+      }
+    }
+
+  private def failWhenInterrupted[F[_] : Sync, A](p: Promise[A]): F[Unit] =
+    Sync[F].delay {
+      p.setInterruptHandler { case ex =>
+        val _ = p.updateIfEmpty(Throw(ex))
+        ()
       }
     }
 
