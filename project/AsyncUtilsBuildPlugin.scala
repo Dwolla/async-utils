@@ -219,6 +219,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "com.twitter" %% "finagle-http2" % v,
             "com.twitter" %% "finagle-netty4-http" % v,
             "com.twitter" %% "finagle-zipkin-core" % v,
+            "org.scalameta" %% "munit" % "1.3.6" % Test,
+            "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
         mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
