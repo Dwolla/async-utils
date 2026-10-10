@@ -230,6 +230,11 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       )
     }
 
+  // Each projectMatrix row's baseDirectory is a synthetic directory under .sbt/matrix,
+  // so the checked-in Scrooge output has to be located relative to the matrix's own directory.
+  private lazy val scroogeGeneratedSources: Setting[?] =
+    Compile / unmanagedSourceDirectories += IO.resolve((ThisBuild / baseDirectory).value, projectMatrixBaseDirectory.value) / "src_managed" / "main" / "scala"
+
   private lazy val `scalafix-input` =
     projectMatrixForSupportedTwitterVersions("scalafix-input", "scalafix/input") { v =>
       List(
@@ -246,7 +251,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         },
         semanticdbEnabled := true,
         semanticdbVersion := scalafixSemanticdb.revision,
-        Compile / unmanagedSourceDirectories += baseDirectory.value / "src_managed" / "main" / "scala",
+        scroogeGeneratedSources,
       )
     }
       .dependsOn(`scalafix-input-dependency`)
@@ -268,7 +273,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         scalacOptions ~= {
           _.filterNot(_ == "-Xfatal-warnings")
         },
-        Compile / unmanagedSourceDirectories += baseDirectory.value / "src_managed" / "main" / "scala",
+        scroogeGeneratedSources,
       )
     }
       .dependsOn(`scalafix-output-dependency`)
