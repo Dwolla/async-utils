@@ -22,6 +22,7 @@ object ZipkinKernel {
         val parentId = headers.get(ci"X-B3-ParentSpanId").flatMap(SpanId.fromString)
         val sampled = headers.get(ci"X-B3-Sampled").collect {
           case "1" => true
+          case "0" => false
         }
 
         TraceId(
