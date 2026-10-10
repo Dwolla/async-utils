@@ -155,6 +155,18 @@ class TracedThriftServerSpec extends CatsEffectSuite with ScalaCheckEffectSuite 
     }
   }
 
+  fixtureWithFinagleTracePropagation.test("an incoming Finagle TraceId with no sampling decision is continued as sampled") { f =>
+    val undecided = exampleTraceId.copy(_sampled = None)
+
+    for {
+      _ <- call(f.client, "foo", undecided.some)
+      spans <- serverSpans(f.testkit)
+    } yield {
+      assertEquals(spans.map(_.getTraceId), List(expectedOtelTraceId(undecided)))
+      assert(spans.forall(_.getSpanContext.isSampled), "the server span should be sampled")
+    }
+  }
+
   fixtureWithFinagleTracePropagation.test("the server span is current while the Thrift implementation runs") { f =>
     for {
       _ <- call(f.client, "foo", exampleTraceId.some)

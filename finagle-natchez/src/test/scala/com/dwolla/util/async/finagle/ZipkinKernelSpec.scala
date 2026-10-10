@@ -37,16 +37,20 @@ class ZipkinKernelSpec extends ScalaCheckSuite {
           ci"X-B3-SpanId" -> hex(t.spanId.toLong),
         ) ++
           t._parentId.map(id => ci"X-B3-ParentSpanId" -> hex(id.toLong)) ++
-          (if (t.sampled.contains(true)) Map(ci"X-B3-Sampled" -> "1") else Map.empty)
+          Map(ci"X-B3-Sampled" -> (if (t.sampled.contains(false)) "0" else "1"))
 
       assertEquals(ZipkinKernel.asKernel(t).toHeaders, expected)
     }
   }
 
-  property("asTraceId reverses asKernel for sampled trace IDs") {
-    forAll { (t: TraceId) =>
-      val sampledTraceId = t.copy(_sampled = true.some)
-      assertEquals(ZipkinKernel.asKernel(sampledTraceId).some.flatMap(ZipkinKernel.asTraceId), sampledTraceId.some)
+  property("asTraceId reverses asKernel for trace IDs with a sampling decision") {
+    forAll { (t: TraceId, sampled: Boolean) =>
+      val decidedTraceId = t.copy(_sampled = sampled.some)
+      val roundTripped = ZipkinKernel.asKernel(decidedTraceId).some.flatMap(ZipkinKernel.asTraceId)
+
+      assertEquals(roundTripped, decidedTraceId.some)
+      // TraceId's equality ignores the sampling decision, so compare it separately
+      assertEquals(roundTripped.flatMap(_.sampled), sampled.some)
     }
   }
 }
