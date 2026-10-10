@@ -47,6 +47,11 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           if (Set("scalafix-input", "scalafix-output", "scalafix-input-dependency", "scalafix-output-dependency", "scalafix-tests").contains(pm.id)) List(pm)
           else List(pm, latestVersionAlias(pm))
         }
+          .flatMap(_.componentProjects) ++
+        List(
+          `async-utils-finagle-otel4s`,
+          latestVersionAlias(`async-utils-finagle-otel4s`, Otel4sScalaVersions, Otel4sVersionIntroduced),
+        )
           .flatMap(_.componentProjects)
   }
 
@@ -66,7 +71,12 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val SCALA_2_12 = "2.12.21"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
+  // otel4s is not published for Scala 2.12, so modules depending on it are built for 2.13 only
+  private val Otel4sScalaVersions: Seq[String] = Seq(SCALA_2_13)
+  private val Otel4sVersionIntroduced: Map[String, String] = Map("2.13" -> "1.4.0")
+
   private val CatsEffect3V = "3.7.1"
+  private val Otel4sV = "1.1.0"
   private val CatsTaglessV: String = "0.16.5"
   private val libthriftV: String = "0.10.0"
 
@@ -81,28 +91,32 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     Def.setting((Compile / scalaSource).value.getParentFile)
 
   private def projectMatrixForSupportedTwitterVersions(id: String,
-                                                       path: String)
+                                                       path: String,
+                                                       scalaVersions: Seq[String] = Scala2Versions)
                                                       (s: Version => List[Setting[?]]): ProjectMatrix =
-    supportedVersions.foldLeft(ProjectMatrix(id, file(path)))(addTwitterCustomRow(s))
+    supportedVersions.foldLeft(ProjectMatrix(id, file(path)))(addTwitterCustomRow(scalaVersions, s))
 
-  private def addTwitterCustomRow(s: Version => List[Setting[?]])
+  private def addTwitterCustomRow(scalaVersions: Seq[String],
+                                  s: Version => List[Setting[?]])
                                  (p: ProjectMatrix, v: Version): ProjectMatrix =
     p.customRow(
-      scalaVersions = Scala2Versions,
+      scalaVersions = scalaVersions,
       axisValues = List(TwitterVersion(v), VirtualAxis.jvm),
       _.settings(
         s(v)
       )
     )
 
-  private def latestVersionAlias(p: ProjectMatrix): ProjectMatrix =
+  private def latestVersionAlias(p: ProjectMatrix,
+                                 scalaVersions: Seq[String] = Scala2Versions,
+                                 versionIntroduced: Map[String, String] = Map("2.12" -> "1.1.0", "2.13" -> "1.1.0")): ProjectMatrix =
     ProjectMatrix(s"${p.id}-latest", file(s".${p.id}-latest"))
       .customRow(
-        scalaVersions = Scala2Versions,
+        scalaVersions = scalaVersions,
         axisValues = List(TwitterVersion(currentTwitterVersion), VirtualAxis.jvm),
         _.settings(
           moduleName := p.id,
-          tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
+          tlVersionIntroduced := versionIntroduced,
         )
       )
       .dependsOn(p)
@@ -205,10 +219,39 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "com.twitter" %% "finagle-http2" % v,
             "com.twitter" %% "finagle-netty4-http" % v,
             "com.twitter" %% "finagle-zipkin-core" % v,
+            "org.scalameta" %% "munit" % "1.3.6" % Test,
+            "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
         mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
         tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
+      )
+    }
+      .dependsOn(`async-utils-finagle`)
+
+  private lazy val `async-utils-finagle-otel4s` =
+    projectMatrixForSupportedTwitterVersions("async-utils-finagle-otel4s", "finagle-otel4s", Otel4sScalaVersions) { v =>
+      List(
+        moduleName := name.value + s"-$v",
+        libraryDependencies ++= {
+          Seq(
+            "org.typelevel" %% "otel4s-core-trace" % Otel4sV,
+            "com.comcast" %% "ip4s-core" % "3.8.0",
+            "com.twitter" %% "scrooge-core" % v % Test,
+            "org.apache.thrift" % "libthrift" % libthriftV % Test,
+            "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV % Test,
+            "org.typelevel" %% "otel4s-oteljava-trace-testkit" % Otel4sV % Test,
+            "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.64.0" % Test,
+            "org.scalameta" %% "munit" % "1.3.6" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
+            "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
+          ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+        },
+        tlVersionIntroduced := Otel4sVersionIntroduced,
+        // reuse the Scrooge-generated service (with the instances added by the AddCatsTaglessInstances rule)
+        // from the Scalafix test fixtures, so the tests can run a real Finagle Thrift server
+        Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "scalafix" / "output" / "src_managed" / "main" / "scala",
+        Test / scalacOptions += "-Wconf:src=scalafix/output/src_managed/.*:s",
       )
     }
       .dependsOn(`async-utils-finagle`)
@@ -331,6 +374,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         "twitter-finagle",
         "twitter-futures",
         "finagle-natchez",
+        "finagle-otel4s",
       )
         .map(x => x -> file(x))
         .toMap,
@@ -350,7 +394,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2021),
-    tlBaseVersion := "1.2",
+    tlBaseVersion := "1.4",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
