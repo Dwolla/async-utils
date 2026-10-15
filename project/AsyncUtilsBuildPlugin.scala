@@ -50,7 +50,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           .flatMap(_.componentProjects)
   }
 
-  private val currentTwitterVersion = Version("22.7.0").get
+  private val currentTwitterVersion = Version("22.12.0").get
 
   // When a new version is released, move what was previously the current version into the list of old versions.
   // This plugin will automatically release a new suffixed artifact that can be used by users with bincompat issues.
