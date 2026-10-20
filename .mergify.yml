@@ -40,6 +40,14 @@ pull_request_rules:
       add:
       - finagle-natchez
       remove: []
+- name: Label finagle-otel4s PRs
+  conditions:
+  - files~=^finagle-otel4s/
+  actions:
+    label:
+      add:
+      - finagle-otel4s
+      remove: []
 - name: Label scala-futures PRs
   conditions:
   - files~=^scala-futures/
