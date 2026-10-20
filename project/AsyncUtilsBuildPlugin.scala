@@ -1,5 +1,6 @@
 import _root_.scalafix.sbt.ScalafixTestkitPlugin.autoImport.*
 import _root_.scalafix.sbt.{ScalafixPlugin, ScalafixTestkitPlugin}
+import com.typesafe.tools.mima.core.{IncompatibleMethTypeProblem, ProblemFilters}
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
 import org.scalajs.jsenv.JSEnv
@@ -208,6 +209,11 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
         mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
+        mimaBinaryIssueFilters ++= Seq(
+          // UnsafeInstrumentationToFuture is private to TracedThriftServer, so no code outside it can call
+          // this constructor; it's public only in bytecode, and its constructor takes `Sync` from 1.4.0 on.
+          ProblemFilters.exclude[IncompatibleMethTypeProblem]("com.dwolla.util.async.finagle.TracedThriftServer#UnsafeInstrumentationToFuture.this"),
+        ),
         tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
       )
     }
