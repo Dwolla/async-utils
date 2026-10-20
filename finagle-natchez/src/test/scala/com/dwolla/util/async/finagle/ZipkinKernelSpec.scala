@@ -61,9 +61,71 @@ class ZipkinKernelSpec extends ScalaCheckSuite {
   private def decode(extraHeaders: (CIString, String)*): TraceId =
     ZipkinKernel.asTraceId(kernelWith(extraHeaders*)).getOrElse(fail("expected a TraceId"))
 
+  private val genSampledHeaders: Gen[List[(CIString, String)]] =
+    Gen.option(Gen.oneOf("0", "1", "true", "false")).map(_.map(ci"X-B3-Sampled" -> _).toList)
+
+  property("asTraceId treats X-B3-Flags: 1 as debug, which implies an accept decision") {
+    forAll(genSampledHeaders) { sampledHeaders =>
+      val t = decode((sampledHeaders :+ (ci"X-B3-Flags" -> "1"))*)
+
+      assertEquals(t.sampled, true.some)
+      assert(t.flags.isDebug)
+    }
+  }
+
+  property("asTraceId ignores X-B3-Flags values other than 1") {
+    forAll(Gen.oneOf("0", "2", "", "true", "d", "-1")) { flags =>
+      val t = decode(ci"X-B3-Flags" -> flags)
+
+      assertEquals(t.sampled, none[Boolean])
+      assert(!t.flags.isDebug)
+    }
+  }
+
+  property("asTraceId accepts the legacy true and false X-B3-Sampled values") {
+    forAll(Gen.oneOf("true" -> true, "false" -> false)) { case (header, expected) =>
+      val t = decode(ci"X-B3-Sampled" -> header)
+
+      assertEquals(t.sampled, expected.some)
+      assert(!t.flags.isDebug)
+    }
+  }
+
   property("asTraceId reads 1 and 0 as sampled and not sampled") {
     forAll(Gen.oneOf("1" -> true, "0" -> false)) { case (header, expected) =>
       assertEquals(decode(ci"X-B3-Sampled" -> header).sampled, expected.some)
+    }
+  }
+
+  property("asTraceId leaves the sampling decision undecided when X-B3-Sampled is absent or unrecognized") {
+    forAll(Gen.oneOf(List.empty[(CIString, String)], List(ci"X-B3-Sampled" -> ""), List(ci"X-B3-Sampled" -> "TRUE"))) { headers =>
+      assertEquals(decode(headers*).sampled, none[Boolean])
+    }
+  }
+
+  property("asKernel renders a debug TraceId as X-B3-Flags: 1 without X-B3-Sampled") {
+    forAll { (t: TraceId) =>
+      val headers = ZipkinKernel.asKernel(t.copy(flags = Flags().setDebug)).toHeaders
+
+      assertEquals(headers.get(ci"X-B3-Flags"), "1".some)
+      assertEquals(headers.get(ci"X-B3-Sampled"), none[String])
+    }
+  }
+
+  property("asKernel does not render X-B3-Flags for a non-debug TraceId") {
+    forAll { (t: TraceId) =>
+      assertEquals(ZipkinKernel.asKernel(t).toHeaders.get(ci"X-B3-Flags"), none[String])
+    }
+  }
+
+  property("asTraceId reverses asKernel for debug trace IDs") {
+    forAll { (t: TraceId) =>
+      val debugTraceId = t.copy(flags = Flags().setDebug)
+      val roundTripped = ZipkinKernel.asKernel(debugTraceId).some.flatMap(ZipkinKernel.asTraceId)
+
+      assertEquals(roundTripped, debugTraceId.some)
+      assertEquals(roundTripped.flatMap(_.sampled), true.some)
+      assert(roundTripped.exists(_.flags.isDebug))
     }
   }
 }

@@ -21,17 +21,20 @@ object ZipkinKernel {
       .map {
         val traceId = header(B3MultiHeaders.TraceIdHeader).map(TraceId128(_))
         val parentId = header(B3MultiHeaders.ParentSpanIdHeader).flatMap(SpanId.fromString)
+        // B3: "Debug is encoded as X-B3-Flags: 1. Absent or any other value can be ignored." Debug implies accept.
+        val debug = header(B3MultiHeaders.FlagsHeader).contains("1")
+        // B3: "some tracers propagated X-B3-Sampled as true or false ... a lenient implementation may accept them."
         val sampled = header(B3MultiHeaders.SampledHeader).collect {
-          case "1" => true
-          case "0" => false
+          case "1" | "true" => true
+          case "0" | "false" => false
         }
 
         TraceId(
           _traceId = traceId.flatMap(_.low),
           _parentId = parentId,
           _,
-          _sampled = sampled,
-          flags = Flags(),
+          _sampled = if (debug) Some(true) else sampled,
+          flags = if (debug) Flags().setDebug else Flags(),
           traceIdHigh = traceId.flatMap(_.high),
         )
       }

@@ -12,12 +12,16 @@ import com.twitter.finagle.tracing.TraceId
  * absent sampling decision defers it to the receiver, but OpenTelemetry's B3
  * propagators read an absent `X-B3-Sampled` as "not sampled", so a parent-based
  * sampler would drop every span continued from an undecided caller.
+ *
+ * A debug `TraceId` is rendered as `X-B3-Flags: 1` with no `X-B3-Sampled`
+ * header, because B3 says debug implies an accept decision.
  */
 private[finagle] object B3MultiHeaders {
   val TraceIdHeader = "X-B3-TraceId"
   val SpanIdHeader = "X-B3-SpanId"
   val ParentSpanIdHeader = "X-B3-ParentSpanId"
   val SampledHeader = "X-B3-Sampled"
+  val FlagsHeader = "X-B3-Flags"
 
   def fromTraceId(t: TraceId): Map[String, String] =
     (
@@ -29,6 +33,8 @@ private[finagle] object B3MultiHeaders {
         List(samplingHeader(t))
     ).toMap
 
+  // B3: "Debug implies an accept decision, so don't also send the X-B3-Sampled header."
   private def samplingHeader(t: TraceId): (String, String) =
-    SampledHeader -> (if (t.sampled.contains(false)) "0" else "1")
+    if (t.flags.isDebug) FlagsHeader -> "1"
+    else SampledHeader -> (if (t.sampled.contains(false)) "0" else "1")
 }
