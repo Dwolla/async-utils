@@ -23,6 +23,7 @@ object ZipkinKernel {
         val parentId = header(B3MultiHeaders.ParentSpanIdHeader).flatMap(SpanId.fromString)
         val sampled = header(B3MultiHeaders.SampledHeader).collect {
           case "1" => true
+          case "0" => false
         }
 
         TraceId(
