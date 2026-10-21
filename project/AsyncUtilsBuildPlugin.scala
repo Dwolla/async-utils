@@ -192,10 +192,21 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         libraryDependencies ++= {
           Seq(
             "com.twitter" %% "finagle-thrift" % v,
+            "com.twitter" %% "scrooge-core" % v % Test,
+            "org.apache.thrift" % "libthrift" % libthriftV % Test,
+            "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV % Test,
+            // matches the slf4j-api 1.7.x that Finagle puts on the test classpath, silencing its "no binding" warning
+            "org.slf4j" % "slf4j-nop" % "1.7.36" % Test,
+            "org.scalameta" %% "munit" % "1.3.6" % Test,
+            "org.typelevel" %% "munit-cats-effect" % "2.2.1" % Test,
           ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
         },
         mimaPreviousArtifacts += organizationName.value %% name.value % "0.3.0",
         tlVersionIntroduced := Map("2.12" -> "1.1.0", "2.13" -> "1.1.0"),
+        // reuse the Scrooge-generated service (with the instances added by the AddCatsTaglessInstances rule)
+        // from the Scalafix test fixtures, so the tests can run a real Finagle Thrift server and client
+        Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "scalafix" / "output" / "src_managed" / "main" / "scala",
+        Test / scalacOptions += "-Wconf:src=scalafix/output/src_managed/.*:s",
       )
     }
       .dependsOn(`async-utils-twitter`)

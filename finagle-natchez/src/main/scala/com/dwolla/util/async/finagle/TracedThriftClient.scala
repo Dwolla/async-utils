@@ -145,7 +145,7 @@ object TracedThriftClient {
                                                                                                                    I: Instrument[Alg],
                                                                                                                    HK2MPE: HigherKindedToMethodPerEndpoint[Alg],
                                                                                                                   ): Resource[F, Alg[G]] =
-    managed(initialAcquire[Alg, F](dest, config).map(alg => AlgR.instrument.mapK(new ProvideFutureAlgInClientSpan[G, Alg](alg))))
+    managed(initialAcquire[Alg, F](dest, config))(alg => AlgR.instrument.mapK(new ProvideFutureAlgInClientSpan[G, Alg](alg)))
 
   private def withAmbientTraceId[Alg[_[_]] <: AnyRef {def asClosable: Closable}, F[_] : Async, G[_] : Async : Trace](dest: String,
                                                                                                                       config: ThriftClientConfiguration)
@@ -154,10 +154,13 @@ object TracedThriftClient {
                                                                                                                       FK: FunctorK[Alg],
                                                                                                                       HK2MPE: HigherKindedToMethodPerEndpoint[Alg],
                                                                                                                      ): Resource[F, Alg[G]] =
-    managed(initialAcquire[Alg, F](dest, config).map(TracedTwitterFutureAsyncFunctorK[G].asyncMapK[Alg]))
+    managed(initialAcquire[Alg, F](dest, config))(TracedTwitterFutureAsyncFunctorK[G].asyncMapK[Alg])
 
-  private def managed[Alg[_[_]] <: AnyRef {def asClosable: Closable}, F[_] : Async, G[_]](acquire: F[Alg[G]]): Resource[F, Alg[G]] =
-    Resource.make(acquire)(alg => liftFuture(Sync[F].delay(alg.asClosable.close())))
+  // release the client Finagle built: the Alg[G] mapped from it doesn't delegate asClosable to it
+  private def managed[Client <: AnyRef {def asClosable: Closable}, F[_] : Async, A](acquire: F[Client])
+                                                                                   (toTraced: Client => A): Resource[F, A] =
+    Resource.make(acquire)(client => liftFuture(Sync[F].delay(client.asClosable.close())))
+      .map(toTraced)
 
   /**
    * Runs each Thrift call in a client span, with the client span's IDs as the call's Finagle `TraceId`.
