@@ -248,7 +248,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
             "org.typelevel" %% "cats-tagless-macros" % CatsTaglessV % Test,
             "org.typelevel" %% "otel4s-oteljava-trace-testkit" % Otel4sV % Test,
             // matches the slf4j-api 1.7.x that Finagle puts on the test classpath, silencing its "no binding" warning
-            "org.slf4j" % "slf4j-nop" % "1.7.30" % Test,
+            "org.slf4j" % "slf4j-nop" % "1.7.36" % Test,
             "org.scalameta" %% "munit" % "1.3.6" % Test,
             "org.typelevel" %% "munit-cats-effect" % "2.2.1" % Test,
             "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
