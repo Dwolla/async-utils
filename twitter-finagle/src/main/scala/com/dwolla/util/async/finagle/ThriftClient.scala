@@ -2,7 +2,6 @@ package com.dwolla.util.async.finagle
 
 import cats.data.*
 import cats.effect.*
-import cats.syntax.all.*
 import cats.tagless.*
 import com.dwolla.util.async.twitter.*
 import com.twitter.finagle.Thrift
@@ -25,13 +24,18 @@ object ThriftClient {
                             AlgR: Alg[ReaderT[Future, Alg[Future], *]],
                             FK: FunctorK[Alg],
                             MPE: HigherKindedToMethodPerEndpoint[Alg],
-                           ): Resource[G, Alg[G]] = {
-      val acquire = initialAcquire(dest, config).map(_.asyncMapK[G])
-      val release: Alg[G] => G[Unit] = alg => liftFuture(Sync[G].delay(alg.asClosable.close()))
-
-      Resource.make(acquire)(release)
-    }
+                           ): Resource[G, Alg[G]] =
+      Resource.make(initialAcquire[Alg, G](dest, config))(closeFinagleClient[Alg, G](_))
+        .map(_.asyncMapK[G])
   }
+
+  /**
+   * Closes the client built by `initialAcquire`. Only that client can close the
+   * Finagle client: the `Alg[G]` instances mapped from it don't delegate
+   * `asClosable` to it, so closing one of them does nothing.
+   */
+  private def closeFinagleClient[Alg[_[_]] <: AnyRef {def asClosable: Closable}, F[_] : Async](client: Alg[Future]): F[Unit] =
+    liftFuture(Sync[F].delay(client.asClosable.close()))
 
   private[finagle] def initialAcquire[Alg[_[_]], F[_] : Sync](dest: String,
                                                               config: ThriftClientConfiguration)
