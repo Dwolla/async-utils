@@ -297,6 +297,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           "org.http4s" %% "http4s-core" % Http4sV,
           "org.http4s" %% "http4s-ember-server" % Http4sV % Test,
           "org.http4s" %% "http4s-ember-client" % Http4sV % Test,
+          "org.typelevel" %% "cats-effect-testkit" % CatsEffect3V % Test,
           "org.scalameta" %% "munit" % "1.3.6" % Test,
           "org.typelevel" %% "munit-cats-effect" % "2.2.1" % Test,
           "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
