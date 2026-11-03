@@ -178,6 +178,13 @@ val fooImpl: FooScroogeService[IO] = new FooScroogeService[IO] {
 val thriftServer: IO[Nothing] = ThriftServer("address", fooImpl)
 ```
 
+Releasing the server's `Resource` shuts it down gracefully. The server refuses new connections
+at once and closes idle ones, while requests already in flight get up to
+`ThriftServer.DefaultShutdownGracePeriod` (15 seconds) to finish; release completes as soon as
+they do. A request still running when the grace period ends is interrupted, which cancels the
+effect handling it. The traced servers in `async-utils-finagle-natchez` and
+`async-utils-finagle-otel4s` shut down the same way.
+
 ### Finagle Servers Traced with otel4s
 
 Using `async-utils-finagle-otel4s`, safely create a Finagle server whose requests are each
@@ -210,6 +217,9 @@ Finagle's `TraceId` explicitly says it isn't (an undecided `TraceId` is continue
 Requests without a Finagle `TraceId` start new root spans. Finagle's own tracing is disabled
 on this server (`NullTracer`), so a Finagle `Tracer` registered through `LoadService` doesn't
 record a duplicate server span.
+
+Releasing the server's `Resource` gives requests in flight a grace period to finish, like
+`ThriftServer` (see Finagle Servers above).
 
 otel4s isn't published for Scala 2.12, so this module is only available for Scala 2.13.
 
