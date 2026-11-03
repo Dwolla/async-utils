@@ -301,10 +301,13 @@ class TracedThriftClientSpec extends CatsEffectSuite with ScalaCheckEffectSuite 
 class FinagleMonitorLog extends Handler {
   private val recorded = new ConcurrentLinkedQueue[LogRecord]()
 
-  override def publish(record: LogRecord): Unit = {
-    recorded.add(record)
-    ()
-  }
+  // The logger is JVM-global, and other projects' tests in the same JVM log to it too, so keep
+  // only the records thrown by this classloader's CancelledViaCatsEffect.
+  override def publish(record: LogRecord): Unit =
+    if (record.getThrown eq CancelledViaCatsEffect) {
+      recorded.add(record)
+      ()
+    }
 
   override def flush(): Unit = ()
   override def close(): Unit = ()
