@@ -170,12 +170,13 @@ Safely create a Finagle server in Twitter Future from an implementation in `IO`:
 ```scala
 import com.dwolla.util.async.finagle.ThriftServer
 import com.dwolla.util.async.twitter._
+import com.twitter.finagle.ListeningServer
 
 val fooImpl: FooScroogeService[IO] = new FooScroogeService[IO] {
   def foo(i: Int): IO[Unit] = IO(println(i))
 }
 
-val thriftServer: IO[Nothing] = ThriftServer("address", fooImpl)
+val thriftServer: Resource[IO, ListeningServer] = ThriftServer("address", fooImpl)
 ```
 
 Releasing the server's `Resource` shuts it down gracefully. The server refuses new connections
