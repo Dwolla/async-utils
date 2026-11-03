@@ -48,6 +48,14 @@ pull_request_rules:
       add:
       - finagle-otel4s
       remove: []
+- name: Label http4s PRs
+  conditions:
+  - files~=^http4s/
+  actions:
+    label:
+      add:
+      - http4s
+      remove: []
 - name: Label scala-futures PRs
   conditions:
   - files~=^scala-futures/
