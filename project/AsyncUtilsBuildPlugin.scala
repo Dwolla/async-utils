@@ -428,7 +428,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2021),
-    tlBaseVersion := "1.5",
+    tlBaseVersion := "1.6",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
