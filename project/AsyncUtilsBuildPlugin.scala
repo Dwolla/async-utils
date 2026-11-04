@@ -53,7 +53,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
           `async-utils-finagle-otel4s`,
           latestVersionAlias(`async-utils-finagle-otel4s`, Otel4sScalaVersions, Otel4sVersionIntroduced),
         )
-          .flatMap(_.componentProjects)
+          .flatMap(_.componentProjects) ++
+        `async-utils-http4s`.componentProjects
   }
 
   private val currentTwitterVersion = Version("22.7.0").get
@@ -70,6 +71,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private val SCALA_2_13: String = "2.13.18"
   private val SCALA_2_12 = "2.12.21"
+  private val SCALA_3 = "3.3.9"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
   // otel4s is not published for Scala 2.12, so modules depending on it are built for 2.13 only
@@ -77,6 +79,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val Otel4sVersionIntroduced: Map[String, String] = Map("2.13" -> "1.4.0")
 
   private val CatsEffect3V = "3.7.1"
+  private val Http4sV = "0.23.38"
   private val Otel4sV = "1.1.0"
   private val CatsTaglessV: String = "0.16.5"
   private val libthriftV: String = "0.10.0"
@@ -285,6 +288,30 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     }
       .dependsOn(`async-utils-finagle`)
 
+  private lazy val `async-utils-http4s` = projectMatrix
+    .in(file("http4s"))
+    .settings(
+      description := "Helpers for http4s servers running behind health-checked load balancers and service registries",
+      libraryDependencies ++= {
+        Seq(
+          "org.http4s" %% "http4s-core" % Http4sV,
+          "org.http4s" %% "http4s-ember-server" % Http4sV % Test,
+          "org.http4s" %% "http4s-ember-client" % Http4sV % Test,
+          // matches the slf4j-api 1.7.x that Ember's log4cats-slf4j puts on the test classpath, silencing its "no binding" warning
+          "org.slf4j" % "slf4j-nop" % "1.7.36" % Test,
+          "org.typelevel" %% "cats-effect-testkit" % CatsEffect3V % Test,
+          "org.scalameta" %% "munit" % "1.3.6" % Test,
+          "org.typelevel" %% "munit-cats-effect" % "2.2.1" % Test,
+          "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
+        ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
+      },
+      tlVersionIntroduced := Map("2.12" -> "1.6.0", "2.13" -> "1.6.0", "3" -> "1.6.0"),
+      // EmberGracefulShutdownSpec asserts wall-clock deadlines against a real server. In sbt's own JVM, the
+      // compilers running alongside it on a clean build cause stop-the-world GC pauses longer than its slack.
+      Test / fork := true,
+    )
+    .jvmPlatform(Scala2Versions :+ SCALA_3)
+
   private lazy val `scalafix-rules` =
     projectMatrixForSupportedTwitterVersions("finagle-tagless-scalafix", "scalafix/rules") { v =>
       List(
@@ -409,6 +436,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         "twitter-futures",
         "finagle-natchez",
         "finagle-otel4s",
+        "http4s",
       )
         .map(x => x -> file(x))
         .toMap,
@@ -428,7 +456,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2021),
-    tlBaseVersion := "1.5",
+    tlBaseVersion := "1.6",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {
