@@ -8,7 +8,7 @@ import cats.tagless.aop.*
 import cats.tagless.implicits.*
 import com.comcast.ip4s.{IpAddress, SocketAddress}
 import com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint.*
-import com.dwolla.util.async.finagle.HigherKindedToMethodPerEndpoint
+import com.dwolla.util.async.finagle.{HigherKindedToMethodPerEndpoint, ThriftServer}
 import com.dwolla.util.async.twitter.*
 import com.twitter.finagle.*
 import com.twitter.finagle.tracing.{NullTracer, Trace, TraceId}
@@ -120,7 +120,7 @@ object TracedThriftServer {
     }
 
   private def release[F[_] : Async](s: ListeningServer): F[Unit] =
-    liftFuture(Sync[F].delay(s.close()))
+    ThriftServer.closeGracefully(s, ThriftServer.DefaultShutdownGracePeriod)
 
   private class UnsafeInstrumentationToFuture[F[_] : Sync](dispatcher: Dispatcher[F],
                                                            tracer: Tracer[F],

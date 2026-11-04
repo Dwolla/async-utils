@@ -89,7 +89,7 @@ object TracedThriftServer {
       }
 
   private def release[F[_] : Async](s: ListeningServer): F[Unit] =
-    liftFuture(Sync[F].delay(s.close()))
+    ThriftServer.closeGracefully(s, ThriftServer.DefaultShutdownGracePeriod)
 
   private class UnsafeInstrumentationToFuture[F[_] : Sync, Thrift[_[_]]](dispatcher: Dispatcher[F],
                                                                          entryPoint: EntryPoint[F],

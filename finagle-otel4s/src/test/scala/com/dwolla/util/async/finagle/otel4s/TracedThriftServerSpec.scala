@@ -3,9 +3,11 @@ package com.dwolla.util.async.finagle.otel4s
 import cats.effect.*
 import cats.syntax.all.*
 import com.comcast.ip4s.*
+import com.dwolla.util.async.finagle.{ThriftClient, ThriftClientConfiguration}
 import com.dwolla.util.async.twitter.*
-import com.twitter.finagle.Thrift
-import com.twitter.finagle.tracing.{Annotation, Flags, SpanId, Trace, TraceId}
+import com.twitter.finagle.stats.NullStatsReceiver
+import com.twitter.finagle.{ListeningServer, Thrift}
+import com.twitter.finagle.tracing.{Annotation, Flags, NullTracer, SpanId, Trace, TraceId}
 import com.twitter.util.{Future, TimeoutException}
 import example.thrift.SimpleService.{SimpleService as SimpleServiceAlg}
 import example.thrift.{SimpleRequest, SimpleResponse, SimpleService}
@@ -18,7 +20,7 @@ import org.typelevel.otel4s.Attribute
 import org.typelevel.otel4s.oteljava.testkit.trace.TracesTestkit
 import org.typelevel.otel4s.trace.{SpanBuilder, Tracer, TracerProvider}
 
-import java.net.InetSocketAddress
+import java.net.{InetSocketAddress, Socket, SocketException}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
@@ -307,6 +309,71 @@ class TracedThriftServerSpec extends CatsEffectSuite with ScalaCheckEffectSuite 
     } yield {
       assertEquals(spans.map(_.getName), List("SimpleService/makeRequest"))
       assertEquals(spans.map(s => (s.getStatus.getStatusCode, s.getStatus.getDescription)), List((JStatusCode.ERROR, "canceled")))
+    }
+  }
+
+  private val heldRequestId = "held"
+
+  /**
+   * A Thrift implementation that holds each call until `finish` is completed, reporting through
+   * `started` when it begins, then echoes the call's ID.
+   */
+  private def holdingService(started: Deferred[IO, Unit], finish: Deferred[IO, Unit]): SimpleServiceAlg[IO] =
+    new SimpleServiceAlg[IO] {
+      override def makeRequest(request: SimpleRequest): IO[SimpleResponse] =
+        (started.complete(()) >> finish.get).as(SimpleResponse(request.id))
+    }
+
+  /**
+   * Acquires the server and hands the test the action that releases it. The release runs at
+   * most once: when the test runs it, or when this `Resource` is released if the test didn't.
+   */
+  private def releasableByTest(server: Resource[IO, ListeningServer]): Resource[IO, (ListeningServer, IO[Unit])] =
+    Resource.make(server.allocated.flatMap { case (s, release) => release.memoize.tupleLeft(s) })(_._2)
+
+  private def untracedClient(server: ListeningServer): Resource[IO, SimpleServiceAlg[IO]] =
+    ThriftClient[SimpleServiceAlg][IO](
+      s"127.0.0.1:${server.boundAddress.asInstanceOf[InetSocketAddress].getPort}",
+      ThriftClientConfiguration().withTracer(NullTracer).withStatsReceiver(NullStatsReceiver),
+    )
+
+  /**
+   * Waits until the server stops accepting new TCP connections, which shows it has started closing.
+   * A connection made just as the listener closes can be reset instead of refused, so a reset counts
+   * as not accepting too. It connects with a plain socket rather than a Finagle client, which would
+   * log such a reset as a channel error.
+   */
+  private def awaitConnectionsRefused(server: ListeningServer): IO[Unit] =
+    Resource.fromAutoCloseable(IO(new Socket()))
+      .use(socket => IO.blocking(socket.connect(server.boundAddress, 1000)))
+      .as(true)
+      .recover { case _: SocketException => false }
+      .iterateWhile(identity)
+      .timeout(10.seconds)
+      .void
+
+  test("a call in flight when the server is released still succeeds") {
+    TracesTestkit.inMemory[IO]().use { testkit =>
+      implicit val tp: TracerProvider[IO] = testkit.tracerProvider
+
+      (Deferred[IO, Unit], Deferred[IO, Unit]).flatMapN { (started, finish) =>
+        releasableByTest(TracedThriftServer[IO, SimpleServiceAlg](loopback, "foo-service", holdingService(started, finish))).use { case (server, release) =>
+          untracedClient(server).use { client =>
+            for {
+              call <- client.makeRequest(SimpleRequest(heldRequestId)).attempt.start
+              _ <- started.get.timeout(10.seconds)
+              releasing <- release.start
+              _ <- awaitConnectionsRefused(server)
+              // Finagle closes a busy connection on its timer once the close deadline passes, a few milliseconds
+              // after the listener closes even when the deadline has already passed, so keep the call in flight a while
+              _ <- IO.sleep(250.millis)
+              _ <- finish.complete(())
+              response <- call.joinWithNever.timeout(10.seconds)
+              _ <- releasing.joinWithNever.timeout(10.seconds)
+            } yield assertEquals(response, Right(SimpleResponse(heldRequestId)))
+          }
+        }
+      }
     }
   }
 }
