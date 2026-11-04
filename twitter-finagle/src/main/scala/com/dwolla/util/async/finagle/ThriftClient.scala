@@ -41,13 +41,11 @@ object ThriftClient {
                                                               config: ThriftClientConfiguration)
                                                              (implicit MPE: HigherKindedToMethodPerEndpoint[Alg]): F[MPE.MPE] =
     Sync[F].delay {
-      Thrift
-        .client
+      config.retryBudgetOverride.foldLeft(Thrift.client) { (client, budget) => client.withRetryBudget(budget) }
         .withSessionPool.maxSize(config.sessionPoolMax)
         .withRequestTimeout(config.requestTimeout)
         .withSession.acquisitionTimeout(config.sessionAcquisitionTimeout)
         .withTransport.connectTimeout(config.transportConnectTimeout)
-        .withRetryBudget(config.retryBudget)
         .withTracer(config.tracer)
         .withStatsReceiver(config.statsReceiver)
         .build[MPE.MPE](dest)(MPE.mpeClassTag)
