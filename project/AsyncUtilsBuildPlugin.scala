@@ -3,6 +3,7 @@ import _root_.scalafix.sbt.{ScalafixPlugin, ScalafixTestkitPlugin}
 import com.typesafe.tools.mima.core.{IncompatibleMethTypeProblem, ProblemFilters}
 import com.typesafe.tools.mima.plugin.MimaPlugin
 import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.*
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
 import org.scalajs.jsenv.JSEnv
 import org.scalajs.jsenv.nodejs.NodeJSEnv
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
@@ -131,8 +132,8 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       description := "Safely convert final tagless-style algebras implemented in Future to cats-effect Async",
       libraryDependencies ++= {
         Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
-          "org.typelevel" %% "cats-tagless-core" % CatsTaglessV,
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
+          "org.typelevel" %%% "cats-tagless-core" % CatsTaglessV,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
       jsEnv := nvmJsEnv.value,
@@ -147,7 +148,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     .settings(
       libraryDependencies ++= {
         Seq(
-          "org.typelevel" %% "cats-effect" % CatsEffect3V,
+          "org.typelevel" %%% "cats-effect" % CatsEffect3V,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
       jsEnv := nvmJsEnv.value,
