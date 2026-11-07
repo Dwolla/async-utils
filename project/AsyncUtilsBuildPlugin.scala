@@ -85,6 +85,18 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val CatsTaglessV: String = "0.16.5"
   private val libthriftV: String = "0.10.0"
 
+  // Scala Native artifacts are first published in the release after 1.6.0
+  private def nativeVersionIntroduced(scalaVersions: Seq[String]): Map[String, String] =
+    scalaVersions.map(CrossVersion.binaryScalaVersion(_) -> "1.6.1").toMap
+
+  // Scala Native adds its compiler plugin with -Xplugin, which Scala 3's scaladoc ignores but warns about.
+  // Scala 2's scaladoc typechecks with the compiler plugins (e.g. kind-projector), so they stay there.
+  private lazy val dropCompilerPluginsFromScala3Doc: Setting[Task[Seq[String]]] =
+    Compile / doc / scalacOptions := {
+      val options = (Compile / doc / scalacOptions).value
+      if (scalaBinaryVersion.value == "3") options.filterNot(_.startsWith("-Xplugin")) else options
+    }
+
   private val scala2CompilerPlugins: Seq[ModuleID] = Seq(
     compilerPlugin("org.typelevel" % "kind-projector" % "0.13.4" cross CrossVersion.full)
   )
@@ -140,10 +152,16 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
     )
     .jvmPlatform(Scala2Versions)
     .jsPlatform(Scala2Versions)
+    .nativePlatform(Scala2Versions, Seq(
+      tlVersionIntroduced := nativeVersionIntroduced(Scala2Versions),
+    ))
 
   private lazy val `async-utils` = projectMatrix
     .jvmPlatform(Scala2Versions)
     .jsPlatform(Scala2Versions)
+    .nativePlatform(Scala2Versions, Seq(
+      tlVersionIntroduced := nativeVersionIntroduced(Scala2Versions),
+    ))
     .in(file("scala-futures"))
     .settings(
       libraryDependencies ++= {
@@ -295,23 +313,28 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       description := "Helpers for http4s servers running behind health-checked load balancers and service registries",
       libraryDependencies ++= {
         Seq(
-          "org.http4s" %% "http4s-core" % Http4sV,
-          "org.http4s" %% "http4s-ember-server" % Http4sV % Test,
-          "org.http4s" %% "http4s-ember-client" % Http4sV % Test,
-          // matches the slf4j-api 1.7.x that Ember's log4cats-slf4j puts on the test classpath, silencing its "no binding" warning
-          "org.slf4j" % "slf4j-nop" % "1.7.36" % Test,
-          "org.typelevel" %% "cats-effect-testkit" % CatsEffect3V % Test,
-          "org.scalameta" %% "munit" % "1.3.6" % Test,
-          "org.typelevel" %% "munit-cats-effect" % "2.2.1" % Test,
-          "org.typelevel" %% "scalacheck-effect-munit" % "2.1.0" % Test,
+          "org.http4s" %%% "http4s-core" % Http4sV,
+          "org.http4s" %%% "http4s-ember-server" % Http4sV % Test,
+          "org.http4s" %%% "http4s-ember-client" % Http4sV % Test,
+          "org.typelevel" %%% "cats-effect-testkit" % CatsEffect3V % Test,
+          "org.scalameta" %%% "munit" % "1.3.6" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+          "org.typelevel" %%% "scalacheck-effect-munit" % "2.1.0" % Test,
         ) ++ (if (scalaVersion.value.startsWith("2")) scala2CompilerPlugins else Nil)
       },
       tlVersionIntroduced := Map("2.12" -> "1.6.0", "2.13" -> "1.6.0", "3" -> "1.6.0"),
+    )
+    .jvmPlatform(Scala2Versions :+ SCALA_3, Seq(
+      // matches the slf4j-api 1.7.x that Ember's log4cats-slf4j puts on the test classpath, silencing its "no binding" warning
+      libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.36" % Test,
       // EmberGracefulShutdownSpec asserts wall-clock deadlines against a real server. In sbt's own JVM, the
       // compilers running alongside it on a clean build cause stop-the-world GC pauses longer than its slack.
       Test / fork := true,
-    )
-    .jvmPlatform(Scala2Versions :+ SCALA_3)
+    ))
+    .nativePlatform(Scala2Versions :+ SCALA_3, Seq(
+      tlVersionIntroduced := nativeVersionIntroduced(Scala2Versions :+ SCALA_3),
+      dropCompilerPluginsFromScala3Doc,
+    ))
 
   private lazy val `scalafix-rules` =
     projectMatrixForSupportedTwitterVersions("finagle-tagless-scalafix", "scalafix/rules") { v =>
@@ -444,6 +467,9 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
     githubWorkflowScalaVersions := Seq("per-project-matrix"),
     githubWorkflowBuildSbtStepPreamble := Nil,
+    // Scala Native warns when it links with clang older than 16. The ubuntu-22.04 runner image tops out at
+    // clang 15, and every clang on the ubuntu-24.04 image is 16 or newer.
+    githubWorkflowOSes := Seq("ubuntu-24.04"),
 
     organization := "com.dwolla",
     homepage := Some(url("https://github.com/Dwolla/async-utils")),
