@@ -491,6 +491,9 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
         .withMergeMinors(true)
     }},
     tlJdkRelease := Option(8),
+    // Scala Native 0.5 warns that running it on a JDK older than 17 is deprecated. The published bytecode
+    // still targets Java 8 through tlJdkRelease.
+    githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17")),
     tlFatalWarnings := githubIsWorkflowBuild.value,
 
     nodeExecutable :=
