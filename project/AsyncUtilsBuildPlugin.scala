@@ -87,7 +87,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   // Scala Native artifacts are first published in the release after 1.6.0
   private def nativeVersionIntroduced(scalaVersions: Seq[String]): Map[String, String] =
-    scalaVersions.map(CrossVersion.binaryScalaVersion(_) -> "1.6.1").toMap
+    scalaVersions.map(CrossVersion.binaryScalaVersion(_) -> "1.7.0").toMap
 
   // Scala Native adds its compiler plugin with -Xplugin, which Scala 3's scaladoc ignores but warns about.
   // Scala 2's scaladoc typechecks with the compiler plugins (e.g. kind-projector), so they stay there.
@@ -483,7 +483,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
       ),
     ),
     startYear := Option(2021),
-    tlBaseVersion := "1.6",
+    tlBaseVersion := "1.7",
     tlCiReleaseBranches := Seq("main"),
     mergifyRequiredJobs ++= Seq("validate-steward"),
     mergifyStewardConfig ~= { _.map {

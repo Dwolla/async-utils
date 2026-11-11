@@ -242,13 +242,13 @@ otel4s isn't published for Scala 2.12, so this module is only available for Scal
 
 ### http4s Graceful Shutdown
 
-Available since 1.6.0 for Scala 2.12, 2.13, and 3 on the JVM, and since 1.6.1 for Scala Native:
+Available since 1.6.0 for Scala 2.12, 2.13, and 3 on the JVM, and since 1.7.0 for Scala Native:
 
 ```scala
 libraryDependencies += "com.dwolla" %% "async-utils-http4s" % "1.6.0"
 
 // or, in a project cross-built for Scala Native
-libraryDependencies += "com.dwolla" %%% "async-utils-http4s" % "1.6.1"
+libraryDependencies += "com.dwolla" %%% "async-utils-http4s" % "1.7.0"
 ```
 
 `async-utils-http4s` helps an http4s server stop receiving traffic before it stops serving it, when
