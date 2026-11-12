@@ -72,7 +72,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
 
   private val SCALA_2_13: String = "2.13.18"
   private val SCALA_2_12 = "2.12.21"
-  private val SCALA_3 = "3.3.9"
+  private val SCALA_3 = "3.9.0"
   private val Scala2Versions: Seq[String] = Seq(SCALA_2_13, SCALA_2_12)
 
   // otel4s is not published for Scala 2.12, so modules depending on it are built for 2.13 only
