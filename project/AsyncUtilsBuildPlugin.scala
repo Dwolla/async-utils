@@ -80,7 +80,7 @@ object AsyncUtilsBuildPlugin extends AutoPlugin {
   private val Otel4sVersionIntroduced: Map[String, String] = Map("2.13" -> "1.4.0")
 
   private val CatsEffect3V = "3.7.1"
-  private val Http4sV = "0.23.38"
+  private val Http4sV = "0.23.39"
   private val Otel4sV = "1.1.0"
   private val CatsTaglessV: String = "0.16.5"
   private val libthriftV: String = "0.10.0"
